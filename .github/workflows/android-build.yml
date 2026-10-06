@@ -20,8 +20,16 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+    - name: Generate Gradle Wrapper Automatically
+      run: |
+        if [ ! -f ./gradlew ]; then
+          echo "Generando gradlew automáticamente..."
+          gradle_version=8.5
+          wget -q https://services.gradle.org/distributions/gradle-${gradle_version}-bin.zip
+          unzip -q gradle-${gradle_version}-bin.zip
+          ./gradle-${gradle_version}/bin/gradle wrapper --gradle-version ${gradle_version}
+        fi
+        chmod +x gradlew
 
     - name: Build Debug APK with Gradle
       run: ./gradlew assembleDebug
