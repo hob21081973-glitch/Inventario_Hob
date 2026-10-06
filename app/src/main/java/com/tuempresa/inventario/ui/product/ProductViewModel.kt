@@ -1,32 +1,41 @@
 package com.tuempresa.inventario.ui.product
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.tuempresa.inventario.data.local.InventoryDatabase
 import com.tuempresa.inventario.data.local.ProductEntity
-import com.tuempresa.inventario.data.repository.ProductRepository
+import com.tuempresa.inventario.repository.ProductRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class ProductViewModel(private val repository: ProductRepository) : ViewModel() {
+class ProductViewModel(application: Application) : AndroidViewModel(application) {
 
-    val products: StateFlow<List<ProductEntity>> = repository.allProducts
-        .stateIn(
+    private val repository: ProductRepository
+
+    val allProducts: StateFlow<List<ProductEntity>>
+
+    init {
+        val productDao = InventoryDatabase.getDatabase(application).productDao()
+        repository = ProductRepository(productDao)
+        allProducts = repository.allProducts.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
+    }
 
-    fun addProduct(name: String, price: Double, stock: Int) {
+    fun insert(name: String, price: Double, stock: Int) {
         viewModelScope.launch {
-            repository.insertProduct(ProductEntity(name = name, price = price, stock = stock))
+            repository.insert(ProductEntity(name = name, price = price, stock = stock))
         }
     }
 
-    fun deleteProduct(product: ProductEntity) {
+    fun delete(product: ProductEntity) {
         viewModelScope.launch {
-            repository.deleteProduct(product)
+            repository.delete(product)
         }
     }
 }
