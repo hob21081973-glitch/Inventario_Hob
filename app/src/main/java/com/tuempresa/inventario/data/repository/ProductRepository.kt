@@ -1,4 +1,4 @@
-package com.tuempresa.inventario.data.repository
+package com.tuempresa.inventario.repository
 
 import com.tuempresa.inventario.data.local.ProductDao
 import com.tuempresa.inventario.data.local.ProductEntity
@@ -8,11 +8,11 @@ class ProductRepository(private val productDao: ProductDao) {
 
     val allProducts: Flow<List<ProductEntity>> = productDao.getAllProducts()
 
-    suspend fun insertProduct(product: ProductEntity) {
+    suspend fun insert(product: ProductEntity) {
         productDao.insertProduct(product)
     }
 
-    suspend fun deleteProduct(product: ProductEntity) {
+    suspend fun delete(product: ProductEntity) {
         productDao.deleteProduct(product)
     }
 }
