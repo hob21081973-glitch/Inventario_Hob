@@ -57,18 +57,37 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun insertSale(customerName: String, productName: String, amount: Double, saleType: String) {
+    // 🚀 NUEVA LÓGICA DE VENTAS CON DESCUENTO DE STOCK
+    fun insertSale(customerName: String, productName: String, quantity: Int, saleType: String, onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch {
+            val product = allProducts.value.find { it.name.equals(productName, ignoreCase = true) }
+            if (product == null) {
+                onResult(false, "El producto no existe.")
+                return@launch
+            }
+
+            if (product.stock < quantity) {
+                onResult(false, "Stock insuficiente. Disponibles: ${product.stock}")
+                return@launch
+            }
+
+            // 1. Descontar stock del producto
+            val updatedProduct = product.copy(stock = product.stock - quantity)
+            repository.insertProduct(updatedProduct) // Room hace replace por ID
+
+            // 2. Registrar la venta
+            val totalAmount = product.price * quantity
             val currentDate = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
             repository.insertSale(
                 SaleEntity(
                     customerName = customerName,
-                    productName = productName,
-                    amount = amount,
+                    productName = "${product.name} (x$quantity)",
+                    amount = totalAmount,
                     saleType = saleType,
                     date = currentDate
                 )
             )
+            onResult(true, "Venta registrada con éxito")
         }
     }
 }
