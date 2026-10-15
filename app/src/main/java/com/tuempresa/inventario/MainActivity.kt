@@ -108,8 +108,10 @@ fun MainScreen(viewModel: ProductViewModel) {
             composable(AppScreen.Sales.route) {
                 SaleScreen(
                     sales = sales,
-                    onAddSale = { customer, product, amount, type ->
-                        viewModel.insertSale(customer, product, amount, type)
+                    customers = customers,
+                    products = products,
+                    onAddSale = { customer, product, qty, type, callback ->
+                        viewModel.insertSale(customer, product, qty, type, callback)
                     }
                 )
             }
