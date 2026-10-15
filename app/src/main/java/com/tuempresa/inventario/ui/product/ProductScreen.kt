@@ -9,6 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -18,6 +20,8 @@ fun ProductScreen(viewModel: ProductViewModel) {
     var name by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
     var stock by remember { mutableStateOf("") }
+
+    val focusRequester = remember { FocusRequester() }
 
     Column(
         modifier = Modifier
@@ -31,7 +35,9 @@ fun ProductScreen(viewModel: ProductViewModel) {
             value = name,
             onValueChange = { name = it },
             label = { Text("Nombre del Producto") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester)
         )
         Spacer(modifier = Modifier.height(8.dp))
         Row(modifier = Modifier.fillMaxWidth()) {
@@ -59,6 +65,7 @@ fun ProductScreen(viewModel: ProductViewModel) {
                     name = ""
                     price = ""
                     stock = ""
+                    focusRequester.requestFocus() // Regresa el foco a Nombre del Producto
                 }
             },
             modifier = Modifier.fillMaxWidth()
