@@ -9,6 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import com.tuempresa.inventario.data.local.CustomerEntity
 
@@ -22,36 +24,38 @@ fun CustomerScreen(
     var phone by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
 
+    val focusRequester = remember { FocusRequester() }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Text("Registro de Clientes", style = MaterialTheme.typography.titleLarge)
+        Text("Gestión de Clientes", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
             label = { Text("Nombre del Cliente") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = phone,
+            onValueChange = { phone = it },
+            label = { Text("Teléfono") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
-        Row(modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
-                value = phone,
-                onValueChange = { phone = it },
-                label = { Text("Teléfono") },
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            OutlinedTextField(
-                value = address,
-                onValueChange = { address = it },
-                label = { Text("Dirección") },
-                modifier = Modifier.weight(1f)
-            )
-        }
+        OutlinedTextField(
+            value = address,
+            onValueChange = { address = it },
+            label = { Text("Dirección") },
+            modifier = Modifier.fillMaxWidth()
+        )
         Spacer(modifier = Modifier.height(12.dp))
         Button(
             onClick = {
@@ -60,11 +64,12 @@ fun CustomerScreen(
                     name = ""
                     phone = ""
                     address = ""
+                    focusRequester.requestFocus() // Regresa el foco a Nombre del Cliente
                 }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Guardar Cliente")
+            Text("Agregar Cliente")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
