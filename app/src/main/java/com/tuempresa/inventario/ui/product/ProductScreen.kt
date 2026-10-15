@@ -24,7 +24,7 @@ fun ProductScreen(viewModel: ProductViewModel) {
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Text("Inventario y Ventas", style = MaterialTheme.typography.titleLarge)
+        Text("Inventario de Productos", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
@@ -38,7 +38,7 @@ fun ProductScreen(viewModel: ProductViewModel) {
             OutlinedTextField(
                 value = price,
                 onValueChange = { price = it },
-                label = { Text("Precio") },
+                label = { Text("Precio (L)") },
                 modifier = Modifier.weight(1f)
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -88,7 +88,7 @@ fun ProductScreen(viewModel: ProductViewModel) {
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(text = product.name, style = MaterialTheme.typography.titleMedium)
-                            Text(text = "Precio: \$${product.price} | Stock: ${product.stock}", style = MaterialTheme.typography.bodyMedium)
+                            Text(text = "Precio: L ${product.price} | Stock: ${product.stock}", style = MaterialTheme.typography.bodyMedium)
                         }
                         IconButton(onClick = { viewModel.deleteProduct(product) }) {
                             Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
