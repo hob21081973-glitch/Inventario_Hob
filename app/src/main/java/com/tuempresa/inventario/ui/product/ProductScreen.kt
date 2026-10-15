@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.default.Delete
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,7 +37,6 @@ fun ProductScreen(viewModel: ProductViewModel) {
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            // Formulario para agregar productos
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
@@ -78,10 +77,9 @@ fun ProductScreen(viewModel: ProductViewModel) {
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            Divider()
+            HorizontalDivider()
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Lista de productos
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
