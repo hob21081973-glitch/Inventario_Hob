@@ -7,6 +7,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import com.tuempresa.inventario.data.local.CustomerEntity
 import com.tuempresa.inventario.data.local.ProductEntity
@@ -30,6 +32,8 @@ fun SaleScreen(
     var quantityText by remember { mutableStateOf("1") }
     var isCredit by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
+
+    val productFocusRequester = remember { FocusRequester() }
 
     val filteredCustomers = customers.filter { it.name.contains(customerQuery, ignoreCase = true) }
     val filteredProducts = products.filter { it.name.contains(productQuery, ignoreCase = true) }
@@ -88,6 +92,7 @@ fun SaleScreen(
                 label = { Text("Buscar Producto...") },
                 modifier = Modifier
                     .fillMaxWidth()
+                    .focusRequester(productFocusRequester)
                     .menuAnchor()
             )
             ExposedDropdownMenu(
@@ -159,6 +164,7 @@ fun SaleScreen(
                             quantityText = "1"
                             selectedProductPrice = 0.0
                             isCredit = false
+                            productFocusRequester.requestFocus() // Regresa el foco a Buscar Producto
                         }
                     }
                 } else {
