@@ -15,7 +15,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.*
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import com.tuempresa.inventario.ui.customer.CustomerScreen
 import com.tuempresa.inventario.ui.navigation.AppScreen
 import com.tuempresa.inventario.ui.product.ProductScreen
