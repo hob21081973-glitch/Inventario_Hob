@@ -1,6 +1,5 @@
 package com.tuempresa.inventario.ui.sale
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,9 +31,7 @@ fun SaleScreen(
     var isCredit by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
-    // Filtrar clientes según lo que escribe el usuario
     val filteredCustomers = customers.filter { it.name.contains(customerQuery, ignoreCase = true) }
-    // Filtrar productos según lo que escribe el usuario
     val filteredProducts = products.filter { it.name.contains(productQuery, ignoreCase = true) }
 
     Column(
@@ -42,10 +39,9 @@ fun SaleScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Text("Nueva Venta con Stock", style = MaterialTheme.typography.titleLarge)
+        Text("Nueva Venta", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(12.dp))
 
-        // --- FILTRO DE CLIENTES ---
         ExposedDropdownMenuBox(
             expanded = expandedCustomer && filteredCustomers.isNotEmpty(),
             onExpandedChange = { expandedCustomer = it }
@@ -79,7 +75,6 @@ fun SaleScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // --- FILTRO DE PRODUCTOS Y PRECIO AUTOMÁTICO ---
         ExposedDropdownMenuBox(
             expanded = expandedProduct && filteredProducts.isNotEmpty(),
             onExpandedChange = { expandedProduct = it }
@@ -101,7 +96,7 @@ fun SaleScreen(
             ) {
                 filteredProducts.forEach { product ->
                     DropdownMenuItem(
-                        text = { Text("${product.name} (Stock: ${product.stock} - \$${product.price})") },
+                        text = { Text("${product.name} (Stock: ${product.stock} - L ${product.price})") },
                         onClick = {
                             productQuery = product.name
                             selectedProductPrice = product.price
@@ -115,8 +110,9 @@ fun SaleScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Row(modifier = Modifier.fillMaxWidth()) {
+            val totalVal = selectedProductPrice * (quantityText.toIntOrNull() ?: 1)
             OutlinedTextField(
-                value = if (selectedProductPrice > 0) "\$${selectedProductPrice * (quantityText.toIntOrNull() ?: 1)}" else "$0.0",
+                value = "L $totalVal",
                 onValueChange = {},
                 readOnly = true,
                 label = { Text("Monto Total") },
@@ -192,7 +188,7 @@ fun SaleScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(text = "Cliente: ${sale.customerName}", style = MaterialTheme.typography.titleMedium)
-                        Text(text = "Detalle: ${sale.productName} | Total: \$${sale.amount}")
+                        Text(text = "Detalle: ${sale.productName} | Total: L ${sale.amount}")
                         Text(text = "Fecha: ${sale.date}")
                         Text(
                             text = "Tipo: ${sale.saleType}",
