@@ -4,8 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
@@ -14,11 +17,7 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.launch
 import com.tuempresa.inventario.ui.customer.CustomerScreen
 import com.tuempresa.inventario.ui.navigation.AppScreen
 import com.tuempresa.inventario.ui.product.ProductScreen
@@ -44,10 +43,12 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MainScreen(viewModel: ProductViewModel) {
-    val navController = rememberNavController()
+    val pagerState = rememberPagerState(pageCount = { 4 })
+    val coroutineScope = rememberCoroutineScope()
+
     val products by viewModel.allProducts.collectAsState()
     val customers by viewModel.allCustomers.collectAsState()
     val sales by viewModel.allSales.collectAsState()
@@ -62,23 +63,14 @@ fun MainScreen(viewModel: ProductViewModel) {
     Scaffold(
         bottomBar = {
             NavigationBar {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = navBackStackEntry?.destination?.route
-
-                items.forEach { (screen, icon) ->
+                items.forEachIndexed { index, (screen, icon) ->
                     NavigationBarItem(
                         icon = { Icon(icon, contentDescription = screen.title) },
                         label = { Text(screen.title) },
-                        selected = currentRoute == screen.route,
+                        selected = pagerState.currentPage == index,
                         onClick = {
-                            if (currentRoute != screen.route) {
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(index)
                             }
                         }
                     )
@@ -86,16 +78,15 @@ fun MainScreen(viewModel: ProductViewModel) {
             }
         }
     ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = AppScreen.Products.route,
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable(AppScreen.Products.route) {
-                ProductScreen(viewModel = viewModel)
-            }
-            composable(AppScreen.Customers.route) {
-                CustomerScreen(
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) { page ->
+            when (page) {
+                0 -> ProductScreen(viewModel = viewModel)
+                1 -> CustomerScreen(
                     customers = customers,
                     onAddCustomer = { name, phone, address ->
                         viewModel.insertCustomer(name, phone, address)
@@ -104,9 +95,7 @@ fun MainScreen(viewModel: ProductViewModel) {
                         viewModel.deleteCustomer(customer)
                     }
                 )
-            }
-            composable(AppScreen.Sales.route) {
-                SaleScreen(
+                2 -> SaleScreen(
                     sales = sales,
                     customers = customers,
                     products = products,
@@ -114,9 +103,7 @@ fun MainScreen(viewModel: ProductViewModel) {
                         viewModel.insertSale(customer, product, qty, type, callback)
                     }
                 )
-            }
-            composable(AppScreen.Reports.route) {
-                ReportScreen()
+                3 -> ReportScreen(sales = sales, customers = customers, products = products)
             }
         }
     }
