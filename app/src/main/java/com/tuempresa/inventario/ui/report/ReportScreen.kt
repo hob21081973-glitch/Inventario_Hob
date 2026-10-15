@@ -84,7 +84,7 @@ fun generatePdfReport(context: Context, fileName: String, title: String, dataLis
     }
     val titlePaint = Paint().apply {
         textSize = 18f
-        isBoldText = true
+        isFakeBoldText = true // 🚀 Corrección aplicada aquí
     }
 
     val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
