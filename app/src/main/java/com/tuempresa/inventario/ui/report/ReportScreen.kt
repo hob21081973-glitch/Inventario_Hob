@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
-import android.os.Environment
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -41,7 +40,7 @@ fun ReportScreen(
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("📄 Exportar Reporte General (Downloads)")
+            Text("📄 Exportar Reporte General")
         }
 
         Button(
@@ -52,7 +51,7 @@ fun ReportScreen(
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
         ) {
-            Text("💳 Exportar Ventas al Crédito (Downloads)")
+            Text("💳 Exportar Ventas al Crédito")
         }
 
         Button(
@@ -63,7 +62,7 @@ fun ReportScreen(
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
         ) {
-            Text("💵 Exportar Ventas al Contado (Downloads)")
+            Text("💵 Exportar Ventas al Contado")
         }
 
         Button(
@@ -72,7 +71,7 @@ fun ReportScreen(
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("📦 Exportar Inventario Actual (Downloads)")
+            Text("📦 Exportar Inventario Actual")
         }
     }
 }
@@ -84,7 +83,7 @@ fun generatePdfReport(context: Context, fileName: String, title: String, dataLis
     }
     val titlePaint = Paint().apply {
         textSize = 18f
-        isFakeBoldText = true // 🚀 Corrección aplicada aquí
+        isFakeBoldText = true
     }
 
     val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
@@ -113,14 +112,11 @@ fun generatePdfReport(context: Context, fileName: String, title: String, dataLis
     pdfDocument.finishPage(page)
 
     try {
-        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-        if (!downloadsDir.exists()) {
-            downloadsDir.mkdirs()
-        }
-        val file = File(downloadsDir, fileName)
+        // Uso de almacenamiento interno seguro de la app (FilesDir)
+        val file = File(context.filesDir, fileName)
         pdfDocument.writeTo(FileOutputStream(file))
         pdfDocument.close()
-        Toast.makeText(context, "PDF guardado en Descargas: ${file.name}", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, "PDF guardado en: ${file.absolutePath}", Toast.LENGTH_LONG).show()
     } catch (e: Exception) {
         pdfDocument.close()
         Toast.makeText(context, "Error al generar PDF: ${e.message}", Toast.LENGTH_LONG).show()
