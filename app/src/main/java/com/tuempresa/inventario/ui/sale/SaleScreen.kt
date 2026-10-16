@@ -3,6 +3,9 @@ package com.tuempresa.inventario.ui.sale
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,7 +23,8 @@ fun SaleScreen(
     sales: List<SaleEntity>,
     customers: List<CustomerEntity>,
     products: List<ProductEntity>,
-    onAddSale: (String, String, Int, String, (Boolean, String) -> Unit) -> Unit
+    onAddSale: (String, String, Int, String, (Boolean, String) -> Unit) -> Unit,
+    onDeleteSale: (SaleEntity) -> Unit
 ) {
     var customerQuery by remember { mutableStateOf("") }
     var expandedCustomer by remember { mutableStateOf(false) }
@@ -33,10 +37,19 @@ fun SaleScreen(
     var isCredit by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
+    // Búsqueda en el historial
+    var historySearchQuery by remember { mutableStateOf("") }
+    var showHistorySearch by remember { mutableStateOf(false) }
+
     val customerFocusRequester = remember { FocusRequester() }
 
     val filteredCustomers = customers.filter { it.name.contains(customerQuery, ignoreCase = true) }
     val filteredProducts = products.filter { it.name.contains(productQuery, ignoreCase = true) }
+    
+    val filteredSales = sales.filter { 
+        it.customerName.contains(historySearchQuery, ignoreCase = true) || 
+        it.productName.contains(historySearchQuery, ignoreCase = true) 
+    }
 
     Column(
         modifier = Modifier
@@ -164,7 +177,7 @@ fun SaleScreen(
                             quantityText = "1"
                             selectedProductPrice = 0.0
                             isCredit = false
-                            customerFocusRequester.requestFocus() // Foco regresa a Buscar Cliente
+                            customerFocusRequester.requestFocus()
                         }
                     }
                 } else {
@@ -180,27 +193,57 @@ fun SaleScreen(
         Divider()
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text("Historial de Ventas", style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(8.dp))
+        // --- ENCABEZADO HISTORIAL CON LUPA DE BÚSQUEDA ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Historial de Ventas", style = MaterialTheme.typography.titleMedium)
+            IconButton(onClick = { showHistorySearch = !showHistorySearch }) {
+                Icon(Icons.Default.Search, contentDescription = "Buscar en historial", tint = MaterialTheme.colorScheme.primary)
+            }
+        }
+
+        if (showHistorySearch) {
+            OutlinedTextField(
+                value = historySearchQuery,
+                onValueChange = { historySearchQuery = it },
+                label = { Text("Filtrar por cliente o producto...") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(sales) { sale ->
+            items(filteredSales) { sale ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = "Cliente: ${sale.customerName}", style = MaterialTheme.typography.titleMedium)
-                        Text(text = "Detalle: ${sale.productName} | Total: L ${sale.amount}")
-                        Text(text = "Fecha: ${sale.date}")
-                        Text(
-                            text = "Tipo: ${sale.saleType}",
-                            color = if (sale.saleType == "CREDITO") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.labelLarge
-                        )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = "Cliente: ${sale.customerName}", style = MaterialTheme.typography.titleMedium)
+                            Text(text = "Detalle: ${sale.productName} | Total: L ${sale.amount}")
+                            Text(text = "Fecha: ${sale.date}")
+                            Text(
+                                text = "Tipo: ${sale.saleType}",
+                                color = if (sale.saleType == "CREDITO") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                        IconButton(onClick = { onDeleteSale(sale) }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Eliminar venta", tint = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
             }
