@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
+import com.tuempresa.inventario.data.local.ProductEntity
 
 @Composable
 fun ProductScreen(viewModel: ProductViewModel) {
@@ -20,6 +22,9 @@ fun ProductScreen(viewModel: ProductViewModel) {
     var name by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
     var stock by remember { mutableStateOf("") }
+
+    var productToEdit by remember { mutableStateOf<ProductEntity?>(null) }
+    var editName by remember { mutableStateOf("") }
 
     val focusRequester = remember { FocusRequester() }
 
@@ -65,7 +70,7 @@ fun ProductScreen(viewModel: ProductViewModel) {
                     name = ""
                     price = ""
                     stock = ""
-                    focusRequester.requestFocus() // Regresa el foco a Nombre del Producto
+                    focusRequester.requestFocus()
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -97,12 +102,51 @@ fun ProductScreen(viewModel: ProductViewModel) {
                             Text(text = product.name, style = MaterialTheme.typography.titleMedium)
                             Text(text = "Precio: L ${product.price} | Stock: ${product.stock}", style = MaterialTheme.typography.bodyMedium)
                         }
-                        IconButton(onClick = { viewModel.deleteProduct(product) }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                        Row {
+                            IconButton(onClick = {
+                                productToEdit = product
+                                editName = product.name
+                            }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
+                            }
+                            IconButton(onClick = { viewModel.deleteProduct(product) }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    // Diálogo emergente para editar producto
+    productToEdit?.let { product ->
+        AlertDialog(
+            onDismissRequest = { productToEdit = null },
+            title = { Text("Editar Nombre de Producto") },
+            text = {
+                OutlinedTextField(
+                    value = editName,
+                    onValueChange = { editName = it },
+                    label = { Text("Nuevo Nombre") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (editName.isNotBlank()) {
+                        viewModel.updateProduct(product.copy(name = editName))
+                        productToEdit = null
+                    }
+                }) {
+                    Text("Guardar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { productToEdit = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
