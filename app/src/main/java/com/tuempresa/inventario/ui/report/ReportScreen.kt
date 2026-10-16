@@ -4,7 +4,10 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -14,8 +17,8 @@ import androidx.compose.ui.unit.dp
 import com.tuempresa.inventario.data.local.CustomerEntity
 import com.tuempresa.inventario.data.local.ProductEntity
 import com.tuempresa.inventario.data.local.SaleEntity
-import java.io.File
-import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun ReportScreen(
@@ -24,6 +27,16 @@ fun ReportScreen(
     products: List<ProductEntity>
 ) {
     val context = LocalContext.current
+
+    var pendingTitle by remember { mutableStateOf("") }
+    var pendingDataList by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    // Selector de archivos para elegir carpeta y guardar
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf")
+    ) { uri: Uri? ->
+        uri?.let { savePdfToUri(context, it, pendingTitle, pendingDataList) }
+    }
 
     Column(
         modifier = Modifier
@@ -36,7 +49,9 @@ fun ReportScreen(
 
         Button(
             onClick = {
-                generatePdfReport(context, "Reporte_General_Ventas.pdf", "Reporte General de Ventas", sales.map { "${it.date} - ${it.customerName} - ${it.productName} - L ${it.amount} (${it.saleType})" })
+                pendingTitle = "Reporte General de Ventas"
+                pendingDataList = sales.map { "${it.date} - ${it.customerName} - ${it.productName} - L ${it.amount} (${it.saleType})" }
+                launcher.launch("Reporte_General_Ventas.pdf")
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -46,7 +61,9 @@ fun ReportScreen(
         Button(
             onClick = {
                 val creditSales = sales.filter { it.saleType == "CREDITO" }
-                generatePdfReport(context, "Reporte_Ventas_Credito.pdf", "Reporte de Ventas al Crédito", creditSales.map { "${it.date} - ${it.customerName} - ${it.productName} - L ${it.amount}" })
+                pendingTitle = "Reporte de Ventas al Crédito"
+                pendingDataList = creditSales.map { "${it.date} - ${it.customerName} - ${it.productName} - L ${it.amount}" }
+                launcher.launch("Reporte_Ventas_Credito.pdf")
             },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
@@ -57,7 +74,9 @@ fun ReportScreen(
         Button(
             onClick = {
                 val cashSales = sales.filter { it.saleType == "CONTADO" }
-                generatePdfReport(context, "Reporte_Ventas_Contado.pdf", "Reporte de Ventas al Contado", cashSales.map { "${it.date} - ${it.customerName} - ${it.productName} - L ${it.amount}" })
+                pendingTitle = "Reporte de Ventas al Contado"
+                pendingDataList = cashSales.map { "${it.date} - ${it.customerName} - ${it.productName} - L ${it.amount}" }
+                launcher.launch("Reporte_Ventas_Contado.pdf")
             },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
@@ -67,7 +86,9 @@ fun ReportScreen(
 
         Button(
             onClick = {
-                generatePdfReport(context, "Reporte_Inventario_Actual.pdf", "Reporte de Inventario Actual", products.map { "${it.name} - Stock: ${it.stock} - L ${it.price}" })
+                pendingTitle = "Reporte de Inventario Actual"
+                pendingDataList = products.map { "${it.name} - Stock: ${it.stock} - L ${it.price}" }
+                launcher.launch("Reporte_Inventario_Actual.pdf")
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -76,15 +97,14 @@ fun ReportScreen(
     }
 }
 
-fun generatePdfReport(context: Context, fileName: String, title: String, dataList: List<String>) {
+fun savePdfToUri(context: Context, uri: Uri, title: String, dataList: List<String>) {
     val pdfDocument = PdfDocument()
-    val paint = Paint().apply {
-        textSize = 14f
-    }
+    val paint = Paint().apply { textSize = 12f }
     val titlePaint = Paint().apply {
         textSize = 18f
         isFakeBoldText = true
     }
+    val datePaint = Paint().apply { textSize = 10f }
 
     val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
     var page = pdfDocument.startPage(pageInfo)
@@ -92,7 +112,12 @@ fun generatePdfReport(context: Context, fileName: String, title: String, dataLis
 
     var y = 50f
     canvas.drawText(title, 50f, y, titlePaint)
-    y += 40f
+    y += 20f
+
+    // Fecha de generación del reporte
+    val currentDate = SimpleDateFormat("Fecha de generación: yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+    canvas.drawText(currentDate, 50f, y, datePaint)
+    y += 30f
 
     if (dataList.isEmpty()) {
         canvas.drawText("No hay registros disponibles para este reporte.", 50f, y, paint)
@@ -105,20 +130,20 @@ fun generatePdfReport(context: Context, fileName: String, title: String, dataLis
                 y = 50f
             }
             canvas.drawText("• $item", 50f, y, paint)
-            y += 25f
+            y += 22f
         }
     }
 
     pdfDocument.finishPage(page)
 
     try {
-        // Uso de almacenamiento interno seguro de la app (FilesDir)
-        val file = File(context.filesDir, fileName)
-        pdfDocument.writeTo(FileOutputStream(file))
+        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+            pdfDocument.writeTo(outputStream)
+        }
         pdfDocument.close()
-        Toast.makeText(context, "PDF guardado en: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, "PDF guardado exitosamente", Toast.LENGTH_LONG).show()
     } catch (e: Exception) {
         pdfDocument.close()
-        Toast.makeText(context, "Error al generar PDF: ${e.message}", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, "Error al guardar el PDF: ${e.message}", Toast.LENGTH_LONG).show()
     }
 }
