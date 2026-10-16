@@ -91,6 +91,9 @@ fun MainScreen(viewModel: ProductViewModel) {
                     onAddCustomer = { name, phone, address ->
                         viewModel.insertCustomer(name, phone, address)
                     },
+                    onUpdateCustomer = { customer ->
+                        viewModel.updateCustomer(customer)
+                    },
                     onDeleteCustomer = { customer ->
                         viewModel.deleteCustomer(customer)
                     }
