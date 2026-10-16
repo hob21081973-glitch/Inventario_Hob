@@ -16,7 +16,7 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         application,
         InventoryDatabase::class.java,
         "inventory_db"
-    ).build() // 🚀 Se retira fallbackToDestructiveMigration para conservar los datos locales al actualizar
+    ).fallbackToDestructiveMigration().build()
 
     private val repository = InventoryRepository(
         database.productDao(),
