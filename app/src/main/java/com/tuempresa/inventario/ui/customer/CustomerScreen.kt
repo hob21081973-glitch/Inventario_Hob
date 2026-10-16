@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,11 +19,15 @@ import com.tuempresa.inventario.data.local.CustomerEntity
 fun CustomerScreen(
     customers: List<CustomerEntity>,
     onAddCustomer: (String, String, String) -> Unit,
+    onUpdateCustomer: (CustomerEntity) -> Unit,
     onDeleteCustomer: (CustomerEntity) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
+
+    var customerToEdit by remember { mutableStateOf<CustomerEntity?>(null) }
+    var editName by remember { mutableStateOf("") }
 
     val focusRequester = remember { FocusRequester() }
 
@@ -64,7 +69,7 @@ fun CustomerScreen(
                     name = ""
                     phone = ""
                     address = ""
-                    focusRequester.requestFocus() // Regresa el foco a Nombre del Cliente
+                    focusRequester.requestFocus()
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -96,12 +101,50 @@ fun CustomerScreen(
                             Text(text = customer.name, style = MaterialTheme.typography.titleMedium)
                             Text(text = "Tel: ${customer.phone} | Dir: ${customer.address}", style = MaterialTheme.typography.bodyMedium)
                         }
-                        IconButton(onClick = { onDeleteCustomer(customer) }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                        Row {
+                            IconButton(onClick = {
+                                customerToEdit = customer
+                                editName = customer.name
+                            }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
+                            }
+                            IconButton(onClick = { onDeleteCustomer(customer) }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    customerToEdit?.let { customer ->
+        AlertDialog(
+            onDismissRequest = { customerToEdit = null },
+            title = { Text("Editar Nombre de Cliente") },
+            text = {
+                OutlinedTextField(
+                    value = editName,
+                    onValueChange = { editName = it },
+                    label = { Text("Nuevo Nombre") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (editName.isNotBlank()) {
+                        onUpdateCustomer(customer.copy(name = editName))
+                        customerToEdit = null
+                    }
+                }) {
+                    Text("Guardar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { customerToEdit = null }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
