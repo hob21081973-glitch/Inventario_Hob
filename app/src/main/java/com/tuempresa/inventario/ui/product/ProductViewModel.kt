@@ -33,15 +33,25 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
     val allSales: StateFlow<List<SaleEntity>> = repository.allSales
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    fun insertProduct(name: String, price: Double, stock: Int) {
+    // 🚀 EVITAR DUPLICADOS EN PRODUCTOS: Si existe, suma stock
+    fun insertOrUpdateProduct(name: String, price: Double, stock: Int, onResult: (String) -> Unit) {
         viewModelScope.launch {
-            repository.insertProduct(ProductEntity(name = name, price = price, stock = stock))
+            val existing = allProducts.value.find { it.name.equals(name.trim(), ignoreCase = true) }
+            if (existing != null) {
+                val updatedStock = existing.stock + stock
+                val updatedProduct = existing.copy(price = price, stock = updatedStock)
+                repository.insertProduct(updatedProduct)
+                onResult("El producto ya existía. Se sumaron $stock unidades al stock (Total: $updatedStock)")
+            } else {
+                repository.insertProduct(ProductEntity(name = name.trim(), price = price, stock = stock))
+                onResult("Producto agregado exitosamente")
+            }
         }
     }
 
     fun updateProduct(product: ProductEntity) {
         viewModelScope.launch {
-            repository.insertProduct(product) // Room reemplaza por ID
+            repository.insertProduct(product)
         }
     }
 
@@ -51,15 +61,22 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun insertCustomer(name: String, phone: String, address: String) {
+    // 🚀 EVITAR DUPLICADOS EN CLIENTES
+    fun insertCustomer(name: String, phone: String, address: String, onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch {
-            repository.insertCustomer(CustomerEntity(name = name, phone = phone, address = address))
+            val existing = allCustomers.value.find { it.name.equals(name.trim(), ignoreCase = true) }
+            if (existing != null) {
+                onResult(false, "Ya existe un cliente registrado con este nombre.")
+            } else {
+                repository.insertCustomer(CustomerEntity(name = name.trim(), phone = phone, address = address))
+                onResult(true, "Cliente registrado con éxito")
+            }
         }
     }
 
     fun updateCustomer(customer: CustomerEntity) {
         viewModelScope.launch {
-            repository.insertCustomer(customer) // Room reemplaza por ID
+            repository.insertCustomer(customer)
         }
     }
 
@@ -97,6 +114,28 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
                 )
             )
             onResult(true, "Venta registrada con éxito")
+        }
+    }
+
+    // 🚀 ELIMINAR VENTA Y DEVOLVER STOCK AL INVENTARIO
+    fun deleteSaleAndRestoreStock(sale: SaleEntity) {
+        viewModelScope.launch {
+            // Intentar extraer el nombre del producto y la cantidad del formato "Producto (xCant)"
+            try {
+                val parts = sale.productName.split(" (x")
+                if (parts.size == 2) {
+                    val pName = parts[0].trim()
+                    val qty = parts[1].replace(")", "").toIntOrNull() ?: 0
+                    
+                    val product = allProducts.value.find { it.name.equals(pName, ignoreCase = true) }
+                    if (product != null) {
+                        val restoredStock = product.stock + qty
+                        repository.insertProduct(product.copy(stock = restoredStock))
+                    }
+                }
+            } catch (_: Exception) {}
+
+            repository.deleteSale(sale)
         }
     }
 }
