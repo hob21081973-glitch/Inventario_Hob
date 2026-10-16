@@ -88,8 +88,8 @@ fun MainScreen(viewModel: ProductViewModel) {
                 0 -> ProductScreen(viewModel = viewModel)
                 1 -> CustomerScreen(
                     customers = customers,
-                    onAddCustomer = { name, phone, address ->
-                        viewModel.insertCustomer(name, phone, address)
+                    onAddCustomer = { name, phone, address, callback ->
+                        viewModel.insertCustomer(name, phone, address, callback)
                     },
                     onUpdateCustomer = { customer ->
                         viewModel.updateCustomer(customer)
@@ -104,6 +104,9 @@ fun MainScreen(viewModel: ProductViewModel) {
                     products = products,
                     onAddSale = { customer, product, qty, type, callback ->
                         viewModel.insertSale(customer, product, qty, type, callback)
+                    },
+                    onDeleteSale = { sale ->
+                        viewModel.deleteSaleAndRestoreStock(sale)
                     }
                 )
                 3 -> ReportScreen(sales = sales, customers = customers, products = products)
