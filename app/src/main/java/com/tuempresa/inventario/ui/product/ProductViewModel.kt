@@ -16,7 +16,7 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         application,
         InventoryDatabase::class.java,
         "inventory_db"
-    ).fallbackToDestructiveMigration().build()
+    ).build() // 🚀 Se retira fallbackToDestructiveMigration para conservar los datos locales al actualizar
 
     private val repository = InventoryRepository(
         database.productDao(),
@@ -33,7 +33,6 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
     val allSales: StateFlow<List<SaleEntity>> = repository.allSales
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    // 🚀 EVITAR DUPLICADOS EN PRODUCTOS: Si existe, suma stock
     fun insertOrUpdateProduct(name: String, price: Double, stock: Int, onResult: (String) -> Unit) {
         viewModelScope.launch {
             val existing = allProducts.value.find { it.name.equals(name.trim(), ignoreCase = true) }
@@ -61,7 +60,6 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // 🚀 EVITAR DUPLICADOS EN CLIENTES
     fun insertCustomer(name: String, phone: String, address: String, onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch {
             val existing = allCustomers.value.find { it.name.equals(name.trim(), ignoreCase = true) }
@@ -117,10 +115,8 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // 🚀 ELIMINAR VENTA Y DEVOLVER STOCK AL INVENTARIO
     fun deleteSaleAndRestoreStock(sale: SaleEntity) {
         viewModelScope.launch {
-            // Intentar extraer el nombre del producto y la cantidad del formato "Producto (xCant)"
             try {
                 val parts = sale.productName.split(" (x")
                 if (parts.size == 2) {
