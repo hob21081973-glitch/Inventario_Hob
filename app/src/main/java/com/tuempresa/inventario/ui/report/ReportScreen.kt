@@ -34,6 +34,7 @@ fun ReportScreen(
     var pendingTitle by remember { mutableStateOf("") }
     var pendingDataList by remember { mutableStateOf<List<String>>(emptyList()) }
 
+    // Selector de archivos del sistema
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/pdf")
     ) { uri: Uri? ->
@@ -52,7 +53,11 @@ fun ReportScreen(
         Button(
             onClick = {
                 pendingTitle = "Reporte General de Ventas"
-                pendingDataList = sales.map { "${it.date} - ${it.customerName} - ${it.productName} - L ${it.amount} (${it.saleType})" }
+                pendingDataList = if (sales.isEmpty()) {
+                    listOf("No hay ventas registradas actualmente.")
+                } else {
+                    sales.map { "${it.date} | Cliente: ${it.customerName} | Producto: ${it.productName} | Total: L ${it.amount} (${it.saleType})" }
+                }
                 launcher.launch("Reporte_General_Ventas.pdf")
             },
             modifier = Modifier.fillMaxWidth()
@@ -64,7 +69,11 @@ fun ReportScreen(
             onClick = {
                 val creditSales = sales.filter { it.saleType == "CREDITO" }
                 pendingTitle = "Reporte de Ventas al Crédito"
-                pendingDataList = creditSales.map { "${it.date} - ${it.customerName} - ${it.productName} - L ${it.amount}" }
+                pendingDataList = if (creditSales.isEmpty()) {
+                    listOf("No hay ventas al crédito registradas.")
+                } else {
+                    creditSales.map { "${it.date} | Cliente: ${it.customerName} | Producto: ${it.productName} | Total: L ${it.amount}" }
+                }
                 launcher.launch("Reporte_Ventas_Credito.pdf")
             },
             modifier = Modifier.fillMaxWidth(),
@@ -77,7 +86,11 @@ fun ReportScreen(
             onClick = {
                 val cashSales = sales.filter { it.saleType == "CONTADO" }
                 pendingTitle = "Reporte de Ventas al Contado"
-                pendingDataList = cashSales.map { "${it.date} - ${it.customerName} - ${it.productName} - L ${it.amount}" }
+                pendingDataList = if (cashSales.isEmpty()) {
+                    listOf("No hay ventas al contado registradas.")
+                } else {
+                    cashSales.map { "${it.date} | Cliente: ${it.customerName} | Producto: ${it.productName} | Total: L ${it.amount}" }
+                }
                 launcher.launch("Reporte_Ventas_Contado.pdf")
             },
             modifier = Modifier.fillMaxWidth(),
@@ -89,7 +102,11 @@ fun ReportScreen(
         Button(
             onClick = {
                 pendingTitle = "Reporte de Inventario Actual"
-                pendingDataList = products.map { "${it.name} - Stock: ${it.stock} - L ${it.price}" }
+                pendingDataList = if (products.isEmpty()) {
+                    listOf("No hay productos registrados en el inventario.")
+                } else {
+                    products.map { "Producto: ${it.name} | Stock: ${it.stock} | Precio: L ${it.price}" }
+                }
                 launcher.launch("Reporte_Inventario_Actual.pdf")
             },
             modifier = Modifier.fillMaxWidth()
@@ -100,10 +117,11 @@ fun ReportScreen(
 }
 
 fun savePdfToUri(context: Context, uri: Uri, title: String, dataList: List<String>) {
+    // 1. Crear documento PDF en memoria de Android
     val pdfDocument = PdfDocument()
-    val paint = Paint().apply { textSize = 12f }
+    val paint = Paint().apply { textSize = 11f }
     val titlePaint = Paint().apply {
-        textSize = 18f
+        textSize = 16f
         isFakeBoldText = true
     }
     val datePaint = Paint().apply { textSize = 10f }
@@ -113,48 +131,46 @@ fun savePdfToUri(context: Context, uri: Uri, title: String, dataList: List<Strin
     var canvas: Canvas = page.canvas
 
     var y = 50f
-    canvas.drawText(title, 50f, y, titlePaint)
+    canvas.drawText(title, 40f, y, titlePaint)
     y += 20f
 
     val currentDate = SimpleDateFormat("Fecha de generación: yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
-    canvas.drawText(currentDate, 50f, y, datePaint)
+    canvas.drawText(currentDate, 40f, y, datePaint)
     y += 30f
 
-    if (dataList.isEmpty()) {
-        canvas.drawText("No hay registros disponibles para este reporte.", 50f, y, paint)
-    } else {
-        for (item in dataList) {
-            if (y > 780f) {
-                pdfDocument.finishPage(page)
-                page = pdfDocument.startPage(pageInfo)
-                canvas = page.canvas
-                y = 50f
-            }
-            canvas.drawText("• $item", 50f, y, paint)
-            y += 22f
+    for (item in dataList) {
+        if (y > 780f) {
+            pdfDocument.finishPage(page)
+            page = pdfDocument.startPage(pageInfo)
+            canvas = page.canvas
+            y = 50f
         }
+        canvas.drawText("• $item", 40f, y, paint)
+        y += 20f
     }
 
     pdfDocument.finishPage(page)
 
     try {
-        // 1. Guardar primero en un archivo temporal en la memoria de la app
-        val tempFile = File(context.cacheDir, "temp_report.pdf")
-        val fileOutputStream = FileOutputStream(tempFile)
-        pdfDocument.writeTo(fileOutputStream)
-        fileOutputStream.flush()
-        fileOutputStream.close()
+        // 2. Guardar en un archivo local cerrado primero en el almacenamiento interno privado de la app
+        val tempFile = File(context.filesDir, "temp_export.pdf")
+        if (tempFile.exists()) tempFile.delete()
+
+        val fos = FileOutputStream(tempFile)
+        pdfDocument.writeTo(fos)
+        fos.flush()
+        fos.close()
         pdfDocument.close()
 
-        // 2. Copiar los bytes completos al Uri seleccionado por el usuario
-        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+        // 3. Copiar los bytes binarios directamente al URI destino seleccionado por el usuario
+        context.contentResolver.openOutputStream(uri, "w")?.use { outputStream ->
             FileInputStream(tempFile).use { inputStream ->
                 inputStream.copyTo(outputStream)
             }
             outputStream.flush()
         }
 
-        Toast.makeText(context, "PDF guardado exitosamente con datos", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, "PDF guardado exitosamente", Toast.LENGTH_LONG).show()
     } catch (e: Exception) {
         pdfDocument.close()
         Toast.makeText(context, "Error al guardar el PDF: ${e.message}", Toast.LENGTH_LONG).show()
