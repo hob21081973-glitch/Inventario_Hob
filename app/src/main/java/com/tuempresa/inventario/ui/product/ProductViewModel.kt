@@ -39,6 +39,12 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun updateProduct(product: ProductEntity) {
+        viewModelScope.launch {
+            repository.insertProduct(product) // Room reemplaza por ID
+        }
+    }
+
     fun deleteProduct(product: ProductEntity) {
         viewModelScope.launch {
             repository.deleteProduct(product)
@@ -51,13 +57,18 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    fun updateCustomer(customer: CustomerEntity) {
+        viewModelScope.launch {
+            repository.insertCustomer(customer) // Room reemplaza por ID
+        }
+    }
+
     fun deleteCustomer(customer: CustomerEntity) {
         viewModelScope.launch {
             repository.deleteCustomer(customer)
         }
     }
 
-    // 🚀 NUEVA LÓGICA DE VENTAS CON DESCUENTO DE STOCK
     fun insertSale(customerName: String, productName: String, quantity: Int, saleType: String, onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch {
             val product = allProducts.value.find { it.name.equals(productName, ignoreCase = true) }
@@ -71,11 +82,9 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
                 return@launch
             }
 
-            // 1. Descontar stock del producto
             val updatedProduct = product.copy(stock = product.stock - quantity)
-            repository.insertProduct(updatedProduct) // Room hace replace por ID
+            repository.insertProduct(updatedProduct)
 
-            // 2. Registrar la venta
             val totalAmount = product.price * quantity
             val currentDate = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
             repository.insertSale(
