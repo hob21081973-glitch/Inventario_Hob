@@ -31,7 +31,6 @@ fun ReportScreen(
     var pendingTitle by remember { mutableStateOf("") }
     var pendingDataList by remember { mutableStateOf<List<String>>(emptyList()) }
 
-    // Selector de archivos para elegir carpeta y guardar
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/pdf")
     ) { uri: Uri? ->
@@ -114,7 +113,6 @@ fun savePdfToUri(context: Context, uri: Uri, title: String, dataList: List<Strin
     canvas.drawText(title, 50f, y, titlePaint)
     y += 20f
 
-    // Fecha de generación del reporte
     val currentDate = SimpleDateFormat("Fecha de generación: yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
     canvas.drawText(currentDate, 50f, y, datePaint)
     y += 30f
@@ -139,9 +137,10 @@ fun savePdfToUri(context: Context, uri: Uri, title: String, dataList: List<Strin
     try {
         context.contentResolver.openOutputStream(uri)?.use { outputStream ->
             pdfDocument.writeTo(outputStream)
+            outputStream.flush() // 🚀 Garantiza que los bytes se escriban completamente en el archivo
         }
         pdfDocument.close()
-        Toast.makeText(context, "PDF guardado exitosamente", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, "PDF generado y guardado correctamente", Toast.LENGTH_LONG).show()
     } catch (e: Exception) {
         pdfDocument.close()
         Toast.makeText(context, "Error al guardar el PDF: ${e.message}", Toast.LENGTH_LONG).show()
