@@ -33,7 +33,7 @@ fun SaleScreen(
     var isCredit by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
-    val productFocusRequester = remember { FocusRequester() }
+    val customerFocusRequester = remember { FocusRequester() }
 
     val filteredCustomers = customers.filter { it.name.contains(customerQuery, ignoreCase = true) }
     val filteredProducts = products.filter { it.name.contains(productQuery, ignoreCase = true) }
@@ -59,6 +59,7 @@ fun SaleScreen(
                 label = { Text("Buscar Cliente...") },
                 modifier = Modifier
                     .fillMaxWidth()
+                    .focusRequester(customerFocusRequester)
                     .menuAnchor()
             )
             ExposedDropdownMenu(
@@ -92,7 +93,6 @@ fun SaleScreen(
                 label = { Text("Buscar Producto...") },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .focusRequester(productFocusRequester)
                     .menuAnchor()
             )
             ExposedDropdownMenu(
@@ -164,7 +164,7 @@ fun SaleScreen(
                             quantityText = "1"
                             selectedProductPrice = 0.0
                             isCredit = false
-                            productFocusRequester.requestFocus() // Regresa el foco a Buscar Producto
+                            customerFocusRequester.requestFocus() // Foco regresa a Buscar Cliente
                         }
                     }
                 } else {
