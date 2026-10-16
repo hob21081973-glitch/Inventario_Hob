@@ -18,13 +18,14 @@ import com.tuempresa.inventario.data.local.CustomerEntity
 @Composable
 fun CustomerScreen(
     customers: List<CustomerEntity>,
-    onAddCustomer: (String, String, String) -> Unit,
+    onAddCustomer: (String, String, String, (Boolean, String) -> Unit) -> Unit,
     onUpdateCustomer: (CustomerEntity) -> Unit,
     onDeleteCustomer: (CustomerEntity) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf<String?>(null) }
 
     var customerToEdit by remember { mutableStateOf<CustomerEntity?>(null) }
     var editName by remember { mutableStateOf("") }
@@ -61,15 +62,27 @@ fun CustomerScreen(
             label = { Text("Dirección") },
             modifier = Modifier.fillMaxWidth()
         )
+
+        message?.let {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(it, color = if (it.contains("éxit")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
         Button(
             onClick = {
                 if (name.isNotBlank()) {
-                    onAddCustomer(name, phone, address)
-                    name = ""
-                    phone = ""
-                    address = ""
-                    focusRequester.requestFocus()
+                    onAddCustomer(name, phone, address) { success, msg ->
+                        message = msg
+                        if (success) {
+                            name = ""
+                            phone = ""
+                            address = ""
+                            focusRequester.requestFocus()
+                        }
+                    }
+                } else {
+                    message = "Ingrese el nombre del cliente."
                 }
             },
             modifier = Modifier.fillMaxWidth()
