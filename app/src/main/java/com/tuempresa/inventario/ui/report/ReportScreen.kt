@@ -17,6 +17,9 @@ import androidx.compose.ui.unit.dp
 import com.tuempresa.inventario.data.local.CustomerEntity
 import com.tuempresa.inventario.data.local.ProductEntity
 import com.tuempresa.inventario.data.local.SaleEntity
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -135,12 +138,23 @@ fun savePdfToUri(context: Context, uri: Uri, title: String, dataList: List<Strin
     pdfDocument.finishPage(page)
 
     try {
-        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-            pdfDocument.writeTo(outputStream)
-            outputStream.flush() // 🚀 Garantiza que los bytes se escriban completamente en el archivo
-        }
+        // 1. Guardar primero en un archivo temporal en la memoria de la app
+        val tempFile = File(context.cacheDir, "temp_report.pdf")
+        val fileOutputStream = FileOutputStream(tempFile)
+        pdfDocument.writeTo(fileOutputStream)
+        fileOutputStream.flush()
+        fileOutputStream.close()
         pdfDocument.close()
-        Toast.makeText(context, "PDF generado y guardado correctamente", Toast.LENGTH_LONG).show()
+
+        // 2. Copiar los bytes completos al Uri seleccionado por el usuario
+        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+            FileInputStream(tempFile).use { inputStream ->
+                inputStream.copyTo(outputStream)
+            }
+            outputStream.flush()
+        }
+
+        Toast.makeText(context, "PDF guardado exitosamente con datos", Toast.LENGTH_LONG).show()
     } catch (e: Exception) {
         pdfDocument.close()
         Toast.makeText(context, "Error al guardar el PDF: ${e.message}", Toast.LENGTH_LONG).show()
