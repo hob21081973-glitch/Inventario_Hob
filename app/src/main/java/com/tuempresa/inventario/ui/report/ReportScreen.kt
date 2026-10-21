@@ -1,25 +1,23 @@
 package com.tuempresa.inventario.ui.report
 
 import android.content.Context
-import android.net.Uri
+import android.content.Intent
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.pdf.PdfDocument
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.itextpdf.text.Document
-import com.itextpdf.text.Element
-import com.itextpdf.text.Font
-import com.itextpdf.text.Paragraph
-import com.itextpdf.text.pdf.PdfWriter
 import com.tuempresa.inventario.data.local.CustomerEntity
 import com.tuempresa.inventario.data.local.ProductEntity
 import com.tuempresa.inventario.data.local.SaleEntity
-import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -30,15 +28,6 @@ fun ReportScreen(
     products: List<ProductEntity>
 ) {
     val context = LocalContext.current
-
-    var pendingTitle by remember { mutableStateOf("") }
-    var pendingDataList by remember { mutableStateOf<List<String>>(emptyList()) }
-
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/pdf")
-    ) { uri: Uri? ->
-        uri?.let { savePdfWithIText(context, it, pendingTitle, pendingDataList) }
-    }
 
     Column(
         modifier = Modifier
@@ -51,116 +40,111 @@ fun ReportScreen(
 
         Button(
             onClick = {
-                pendingTitle = "Reporte General de Ventas"
-                pendingDataList = if (sales.isEmpty()) {
-                    listOf("No hay ventas registradas actualmente.")
-                } else {
-                    sales.map { "${it.date} | Cliente: ${it.customerName} | Producto: ${it.productName} | Total: L ${it.amount} (${it.saleType})" }
-                }
-                launcher.launch("Reporte_General_Ventas.pdf")
+                val data = if (sales.isEmpty()) listOf("No hay ventas registradas.") else sales.map { "${it.date} | Cliente: ${it.customerName} | Producto: ${it.productName} | Total: L ${it.amount} (${it.saleType})" }
+                generateAndOpenPdf(context, "Reporte_General_Ventas.pdf", "Reporte General de Ventas", data)
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("📄 Exportar Reporte General")
+            Text("📄 Ver/Exportar Reporte General")
         }
 
         Button(
             onClick = {
                 val creditSales = sales.filter { it.saleType == "CREDITO" }
-                pendingTitle = "Reporte de Ventas al Crédito"
-                pendingDataList = if (creditSales.isEmpty()) {
-                    listOf("No hay ventas al crédito registradas.")
-                } else {
-                    creditSales.map { "${it.date} | Cliente: ${it.customerName} | Producto: ${it.productName} | Total: L ${it.amount}" }
-                }
-                launcher.launch("Reporte_Ventas_Credito.pdf")
+                val data = if (creditSales.isEmpty()) listOf("No hay ventas al crédito.") else creditSales.map { "${it.date} | Cliente: ${it.customerName} | Producto: ${it.productName} | Total: L ${it.amount}" }
+                generateAndOpenPdf(context, "Reporte_Ventas_Credito.pdf", "Reporte de Ventas al Crédito", data)
             },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
         ) {
-            Text("💳 Exportar Ventas al Crédito")
+            Text("💳 Ver/Exportar Ventas al Crédito")
         }
 
         Button(
             onClick = {
                 val cashSales = sales.filter { it.saleType == "CONTADO" }
-                pendingTitle = "Reporte de Ventas al Contado"
-                pendingDataList = if (cashSales.isEmpty()) {
-                    listOf("No hay ventas al contado registradas.")
-                } else {
-                    cashSales.map { "${it.date} | Cliente: ${it.customerName} | Producto: ${it.productName} | Total: L ${it.amount}" }
-                }
-                launcher.launch("Reporte_Ventas_Contado.pdf")
+                val data = if (cashSales.isEmpty()) listOf("No hay ventas al contado.") else cashSales.map { "${it.date} | Cliente: ${it.customerName} | Producto: ${it.productName} | Total: L ${it.amount}" }
+                generateAndOpenPdf(context, "Reporte_Ventas_Contado.pdf", "Reporte de Ventas al Contado", data)
             },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
         ) {
-            Text("💵 Exportar Ventas al Contado")
+            Text("💵 Ver/Exportar Ventas al Contado")
         }
 
         Button(
             onClick = {
-                pendingTitle = "Reporte de Inventario Actual"
-                pendingDataList = if (products.isEmpty()) {
-                    listOf("No hay productos registrados en el inventario.")
-                } else {
-                    products.map { "Producto: ${it.name} | Stock: ${it.stock} | Precio: L ${it.price}" }
-                }
-                launcher.launch("Reporte_Inventario_Actual.pdf")
+                val data = if (products.isEmpty()) listOf("No hay productos en inventario.") else products.map { "Producto: ${it.name} | Stock: ${it.stock} | Precio: L ${it.price}" }
+                generateAndOpenPdf(context, "Reporte_Inventario_Actual.pdf", "Reporte de Inventario Actual", data)
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("📦 Exportar Inventario Actual")
+            Text("📦 Ver/Exportar Inventario Actual")
         }
     }
 }
 
-fun savePdfWithIText(context: Context, uri: Uri, title: String, dataList: List<String>) {
+fun generateAndOpenPdf(context: Context, fileName: String, title: String, dataList: List<String>) {
+    val pdfDocument = PdfDocument()
+    val paint = Paint().apply { textSize = 11f }
+    val titlePaint = Paint().apply {
+        textSize = 16f
+        isFakeBoldText = true
+    }
+    val datePaint = Paint().apply { textSize = 10f }
+
+    val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
+    var page = pdfDocument.startPage(pageInfo)
+    var canvas: Canvas = page.canvas
+
+    var y = 50f
+    canvas.drawText(title, 40f, y, titlePaint)
+    y += 20f
+
+    val currentDate = SimpleDateFormat("Fecha de generación: yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+    canvas.drawText(currentDate, 40f, y, datePaint)
+    y += 30f
+
+    for (item in dataList) {
+        if (y > 780f) {
+            pdfDocument.finishPage(page)
+            page = pdfDocument.startPage(pageInfo)
+            canvas = page.canvas
+            y = 50f
+        }
+        canvas.drawText("• $item", 40f, y, paint)
+        y += 20f
+    }
+
+    pdfDocument.finishPage(page)
+
     try {
-        val document = Document()
-        val byteStream = ByteArrayOutputStream()
+        // Guardar de forma segura en el almacenamiento interno de la app
+        val file = File(context.filesDir, fileName)
+        val fos = FileOutputStream(file)
+        pdfDocument.writeTo(fos)
+        fos.flush()
+        fos.close()
+        pdfDocument.close()
+
+        Toast.makeText(context, "PDF generado con éxito (${file.length()} bytes)", Toast.LENGTH_LONG).show()
+
+        // Abrir el PDF automáticamente con cualquier app de lectura instalada en el teléfono
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/pdf")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
         
-        PdfWriter.getInstance(document, byteStream)
-        document.open()
-
-        // Estilos de fuentes
-        val titleFont = Font(Font.FontFamily.HELVETICA, 18f, Font.BOLD)
-        val dateFont = Font(Font.FontFamily.HELVETICA, 10f, Font.ITALIC)
-        val bodyFont = Font(Font.FontFamily.HELVETICA, 11f, Font.NORMAL)
-
-        // Título del Reporte
-        val pTitle = Paragraph(title, titleFont).apply {
-            alignment = Element.ALIGN_LEFT
-            spacingAfter = 10f
-        }
-        document.add(pTitle)
-
-        // Fecha de generación
-        val currentDate = SimpleDateFormat("Fecha de generación: yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
-        val pDate = Paragraph(currentDate, dateFont).apply {
-            spacingAfter = 20f
-        }
-        document.add(pDate)
-
-        // Contenido de ventas/productos
-        for (item in dataList) {
-            val pItem = Paragraph("• $item", bodyFont).apply {
-                spacingAfter = 6f
-            }
-            document.add(pItem)
+        try {
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Reporte guardado en memoria interna. Instale un visor de PDF.", Toast.LENGTH_LONG).show()
         }
 
-        document.close()
-
-        // Escribir el buffer binario iText directamente al URI destino
-        val pdfBytes = byteStream.toByteArray()
-        context.contentResolver.openOutputStream(uri, "w")?.use { outputStream ->
-            outputStream.write(pdfBytes)
-            outputStream.flush()
-        }
-
-        Toast.makeText(context, "PDF generado exitosamente (${pdfBytes.size / 1024} KB)", Toast.LENGTH_LONG).show()
     } catch (e: Exception) {
+        pdfDocument.close()
         Toast.makeText(context, "Error al generar PDF: ${e.message}", Toast.LENGTH_LONG).show()
     }
 }
