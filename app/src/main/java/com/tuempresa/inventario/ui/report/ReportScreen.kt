@@ -1,9 +1,6 @@
 package com.tuempresa.inventario.ui.report
 
 import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -14,12 +11,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.itextpdf.text.Document
+import com.itextpdf.text.Element
+import com.itextpdf.text.Font
+import com.itextpdf.text.Paragraph
+import com.itextpdf.text.pdf.PdfWriter
 import com.tuempresa.inventario.data.local.CustomerEntity
 import com.tuempresa.inventario.data.local.ProductEntity
 import com.tuempresa.inventario.data.local.SaleEntity
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
+import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -34,11 +34,10 @@ fun ReportScreen(
     var pendingTitle by remember { mutableStateOf("") }
     var pendingDataList by remember { mutableStateOf<List<String>>(emptyList()) }
 
-    // Selector de archivos del sistema
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/pdf")
     ) { uri: Uri? ->
-        uri?.let { savePdfToUri(context, it, pendingTitle, pendingDataList) }
+        uri?.let { savePdfWithIText(context, it, pendingTitle, pendingDataList) }
     }
 
     Column(
@@ -116,63 +115,52 @@ fun ReportScreen(
     }
 }
 
-fun savePdfToUri(context: Context, uri: Uri, title: String, dataList: List<String>) {
-    // 1. Crear documento PDF en memoria de Android
-    val pdfDocument = PdfDocument()
-    val paint = Paint().apply { textSize = 11f }
-    val titlePaint = Paint().apply {
-        textSize = 16f
-        isFakeBoldText = true
-    }
-    val datePaint = Paint().apply { textSize = 10f }
-
-    val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
-    var page = pdfDocument.startPage(pageInfo)
-    var canvas: Canvas = page.canvas
-
-    var y = 50f
-    canvas.drawText(title, 40f, y, titlePaint)
-    y += 20f
-
-    val currentDate = SimpleDateFormat("Fecha de generación: yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
-    canvas.drawText(currentDate, 40f, y, datePaint)
-    y += 30f
-
-    for (item in dataList) {
-        if (y > 780f) {
-            pdfDocument.finishPage(page)
-            page = pdfDocument.startPage(pageInfo)
-            canvas = page.canvas
-            y = 50f
-        }
-        canvas.drawText("• $item", 40f, y, paint)
-        y += 20f
-    }
-
-    pdfDocument.finishPage(page)
-
+fun savePdfWithIText(context: Context, uri: Uri, title: String, dataList: List<String>) {
     try {
-        // 2. Guardar en un archivo local cerrado primero en el almacenamiento interno privado de la app
-        val tempFile = File(context.filesDir, "temp_export.pdf")
-        if (tempFile.exists()) tempFile.delete()
+        val document = Document()
+        val byteStream = ByteArrayOutputStream()
+        
+        PdfWriter.getInstance(document, byteStream)
+        document.open()
 
-        val fos = FileOutputStream(tempFile)
-        pdfDocument.writeTo(fos)
-        fos.flush()
-        fos.close()
-        pdfDocument.close()
+        // Estilos de fuentes
+        val titleFont = Font(Font.FontFamily.HELVETICA, 18f, Font.BOLD)
+        val dateFont = Font(Font.FontFamily.HELVETICA, 10f, Font.ITALIC)
+        val bodyFont = Font(Font.FontFamily.HELVETICA, 11f, Font.NORMAL)
 
-        // 3. Copiar los bytes binarios directamente al URI destino seleccionado por el usuario
-        context.contentResolver.openOutputStream(uri, "w")?.use { outputStream ->
-            FileInputStream(tempFile).use { inputStream ->
-                inputStream.copyTo(outputStream)
+        // Título del Reporte
+        val pTitle = Paragraph(title, titleFont).apply {
+            alignment = Element.ALIGN_LEFT
+            spacingAfter = 10f
+        }
+        document.add(pTitle)
+
+        // Fecha de generación
+        val currentDate = SimpleDateFormat("Fecha de generación: yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+        val pDate = Paragraph(currentDate, dateFont).apply {
+            spacingAfter = 20f
+        }
+        document.add(pDate)
+
+        // Contenido de ventas/productos
+        for (item in dataList) {
+            val pItem = Paragraph("• $item", bodyFont).apply {
+                spacingAfter = 6f
             }
+            document.add(pItem)
+        }
+
+        document.close()
+
+        // Escribir el buffer binario iText directamente al URI destino
+        val pdfBytes = byteStream.toByteArray()
+        context.contentResolver.openOutputStream(uri, "w")?.use { outputStream ->
+            outputStream.write(pdfBytes)
             outputStream.flush()
         }
 
-        Toast.makeText(context, "PDF guardado exitosamente", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, "PDF generado exitosamente (${pdfBytes.size / 1024} KB)", Toast.LENGTH_LONG).show()
     } catch (e: Exception) {
-        pdfDocument.close()
-        Toast.makeText(context, "Error al guardar el PDF: ${e.message}", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, "Error al generar PDF: ${e.message}", Toast.LENGTH_LONG).show()
     }
 }
