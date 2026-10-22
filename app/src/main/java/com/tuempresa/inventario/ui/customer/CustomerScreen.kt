@@ -1,5 +1,6 @@
 package com.tuempresa.inventario.ui.customer
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,27 +11,21 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.tuempresa.inventario.data.local.CustomerEntity
+import com.tuempresa.inventario.ui.product.ProductViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CustomerScreen(
-    customers: List<CustomerEntity>,
-    onAddCustomer: (String, String, String, (Boolean, String) -> Unit) -> Unit,
-    onUpdateCustomer: (CustomerEntity) -> Unit,
-    onDeleteCustomer: (CustomerEntity) -> Unit
-) {
+fun CustomerScreen(viewModel: ProductViewModel) {
+    val context = LocalContext.current
+    val customers by viewModel.allCustomers.collectAsState()
+
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
-    var message by remember { mutableStateOf<String?>(null) }
-
     var customerToEdit by remember { mutableStateOf<CustomerEntity?>(null) }
-    var editName by remember { mutableStateOf("") }
-
-    val focusRequester = remember { FocusRequester() }
 
     Column(
         modifier = Modifier
@@ -40,13 +35,12 @@ fun CustomerScreen(
         Text("Gestión de Clientes", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(12.dp))
 
+        // Formulario de Registro
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
             label = { Text("Nombre del Cliente") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester)
+            modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
@@ -62,41 +56,38 @@ fun CustomerScreen(
             label = { Text("Dirección") },
             modifier = Modifier.fillMaxWidth()
         )
-
-        message?.let {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(it, color = if (it.contains("éxit")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
-        }
-
         Spacer(modifier = Modifier.height(12.dp))
+
         Button(
             onClick = {
-                if (name.isNotBlank()) {
-                    onAddCustomer(name, phone, address) { success, msg ->
-                        message = msg
-                        if (success) {
-                            name = ""
-                            phone = ""
-                            address = ""
-                            focusRequester.requestFocus()
-                        }
+                if (name.isBlank()) {
+                    Toast.makeText(context, "El nombre es obligatorio", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+                viewModel.insertCustomer(name, phone, address) { success, msg ->
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                    if (success) {
+                        name = ""
+                        phone = ""
+                        address = ""
                     }
-                } else {
-                    message = "Ingrese el nombre del cliente."
                 }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Agregar Cliente")
+            Text("Registrar Cliente")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
         Divider()
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text("Clientes Registrados", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
 
         LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(customers) { customer ->
                 Card(
@@ -106,22 +97,20 @@ fun CustomerScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(text = customer.name, style = MaterialTheme.typography.titleMedium)
-                            Text(text = "Tel: ${customer.phone} | Dir: ${customer.address}", style = MaterialTheme.typography.bodyMedium)
+                            Text(text = "Tel: ${customer.phone}", style = MaterialTheme.typography.bodyMedium)
+                            Text(text = "Dir: ${customer.address}", style = MaterialTheme.typography.bodySmall)
                         }
                         Row {
-                            IconButton(onClick = {
-                                customerToEdit = customer
-                                editName = customer.name
-                            }) {
+                            IconButton(onClick = { customerToEdit = customer }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
                             }
-                            IconButton(onClick = { onDeleteCustomer(customer) }) {
+                            IconButton(onClick = { viewModel.deleteCustomer(customer) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
                             }
                         }
@@ -131,33 +120,68 @@ fun CustomerScreen(
         }
     }
 
-    customerToEdit?.let { customer ->
-        AlertDialog(
-            onDismissRequest = { customerToEdit = null },
-            title = { Text("Editar Nombre de Cliente") },
-            text = {
-                OutlinedTextField(
-                    value = editName,
-                    onValueChange = { editName = it },
-                    label = { Text("Nuevo Nombre") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                Button(onClick = {
-                    if (editName.isNotBlank()) {
-                        onUpdateCustomer(customer.copy(name = editName))
-                        customerToEdit = null
-                    }
-                }) {
-                    Text("Guardar")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { customerToEdit = null }) {
-                    Text("Cancelar")
-                }
+    // Diálogo de Edición de Cliente
+    customerToEdit?.let { cust ->
+        EditCustomerDialog(
+            customer = cust,
+            onDismiss = { customerToEdit = null },
+            onSave = { updatedName, updatedPhone, updatedAddress ->
+                viewModel.updateCustomer(cust.copy(name = updatedName, phone = updatedPhone, address = updatedAddress))
+                Toast.makeText(context, "Cliente actualizado con éxito", Toast.LENGTH_SHORT).show()
             }
         )
     }
+}
+
+@Composable
+fun EditCustomerDialog(
+    customer: CustomerEntity,
+    onDismiss: () -> Unit,
+    onSave: (String, String, String) -> Unit
+) {
+    var name by remember { mutableStateOf(customer.name) }
+    var phone by remember { mutableStateOf(customer.phone) }
+    var address by remember { mutableStateOf(customer.address) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Editar Cliente") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nombre") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = { Text("Teléfono") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = address,
+                    onValueChange = { address = it },
+                    label = { Text("Dirección") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                if (name.isNotBlank()) {
+                    onSave(name.trim(), phone.trim(), address.trim())
+                    onDismiss()
+                }
+            }) {
+                Text("Guardar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
 }
