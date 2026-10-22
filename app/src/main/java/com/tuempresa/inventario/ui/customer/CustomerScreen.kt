@@ -11,6 +11,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.tuempresa.inventario.data.local.CustomerEntity
@@ -20,12 +22,19 @@ import com.tuempresa.inventario.ui.product.ProductViewModel
 @Composable
 fun CustomerScreen(viewModel: ProductViewModel) {
     val context = LocalContext.current
-    val customers by viewModel.allCustomers.collectAsState()
+    val rawCustomers by viewModel.allCustomers.collectAsState()
+
+    // 🔤 Ordenar clientes alfabéticamente de la A a la Z
+    val customers = remember(rawCustomers) {
+        rawCustomers.sortedBy { it.name.lowercase() }
+    }
 
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
     var customerToEdit by remember { mutableStateOf<CustomerEntity?>(null) }
+
+    val focusRequester = remember { FocusRequester() }
 
     Column(
         modifier = Modifier
@@ -35,12 +44,13 @@ fun CustomerScreen(viewModel: ProductViewModel) {
         Text("Gestión de Clientes", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Formulario de Registro
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
             label = { Text("Nombre del Cliente") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester) // 🎯 Control de foco
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
@@ -70,6 +80,10 @@ fun CustomerScreen(viewModel: ProductViewModel) {
                         name = ""
                         phone = ""
                         address = ""
+                        // Regresar el foco al campo Nombre del Cliente
+                        try {
+                            focusRequester.requestFocus()
+                        } catch (_: Exception) {}
                     }
                 }
             },
@@ -82,7 +96,7 @@ fun CustomerScreen(viewModel: ProductViewModel) {
         Divider()
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text("Clientes Registrados", style = MaterialTheme.typography.titleMedium)
+        Text("Clientes Registrados (A-Z)", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
 
         LazyColumn(
@@ -120,7 +134,6 @@ fun CustomerScreen(viewModel: ProductViewModel) {
         }
     }
 
-    // Diálogo de Edición de Cliente
     customerToEdit?.let { cust ->
         EditCustomerDialog(
             customer = cust,
