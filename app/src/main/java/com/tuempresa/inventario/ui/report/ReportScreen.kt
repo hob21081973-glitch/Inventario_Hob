@@ -17,7 +17,7 @@ fun generateSafePdf(context: Context, fileName: String, title: String, dataList:
         y += 25f
 
         // 🚀 Solución: Separar el texto estático de la fecha formateada para evitar conflicto con la letra 'e'
-        val dateFormatted = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
+        val dateFormatted = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         canvas.drawText("Fecha: $dateFormatted", 40f, y, paint)
         y += 35f
 
