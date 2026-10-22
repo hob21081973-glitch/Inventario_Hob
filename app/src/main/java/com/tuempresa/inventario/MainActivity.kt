@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
@@ -48,20 +47,19 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MainScreen(viewModel: ProductViewModel) {
-    val pagerState = rememberPagerState(pageCount = { 5 }) // 5 pestañas ahora
+    val pagerState = rememberPagerState(pageCount = { 5 })
     val coroutineScope = rememberCoroutineScope()
 
     val products by viewModel.allProducts.collectAsState()
     val customers by viewModel.allCustomers.collectAsState()
     val sales by viewModel.allSales.collectAsState()
 
-    // Definimos las 5 pestañas con sus respectivos iconos
     val items = listOf(
         Triple(AppScreen.Products, Icons.Default.Home, "Inventario"),
         Triple(AppScreen.Customers, Icons.Default.Person, "Clientes"),
         Triple(AppScreen.Sales, Icons.Default.ShoppingCart, "Ventas"),
         Triple(AppScreen.Reports, Icons.Default.List, "Reportes"),
-        Triple(AppScreen.Reports, Icons.Default.CreditCard, "Créditos") // Pestaña de Abonos y Créditos
+        Triple(AppScreen.Reports, Icons.Default.ShoppingCart, "Créditos")
     )
 
     Scaffold(
@@ -103,7 +101,7 @@ fun MainScreen(viewModel: ProductViewModel) {
                     }
                 )
                 3 -> ReportScreen(sales = sales, customers = customers, products = products)
-                4 -> CreditPaymentScreen(viewModel = viewModel) // Módulo de Abonos
+                4 -> CreditPaymentScreen(viewModel = viewModel)
             }
         }
     }
