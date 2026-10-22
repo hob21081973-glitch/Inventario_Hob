@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,7 +46,7 @@ fun CreditPaymentScreen(viewModel: ProductViewModel) {
             .padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.CreditCard, contentDescription = "Créditos", tint = MaterialTheme.colorScheme.primary)
+            Icon(Icons.Default.ShoppingCart, contentDescription = "Créditos", tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(8.dp))
             Text("Gestión de Abonos y Créditos", style = MaterialTheme.typography.titleLarge)
         }
@@ -59,7 +59,6 @@ fun CreditPaymentScreen(viewModel: ProductViewModel) {
         if (customers.isEmpty()) {
             Text("No hay clientes registrados.", color = MaterialTheme.colorScheme.error)
         } else {
-            // Dropdown o lista desplegable simple de clientes
             var expanded by remember { mutableStateOf(false) }
             
             ExposedDropdownMenuBox(
@@ -95,7 +94,7 @@ fun CreditPaymentScreen(viewModel: ProductViewModel) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Si hay un cliente seleccionado, mostramos su estado de cuenta y formulario de abono
+        // Si hay un cliente seleccionado, mostrar su estado de cuenta y formulario de abono
         if (selectedCustomer != null) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
