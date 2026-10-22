@@ -86,18 +86,7 @@ fun MainScreen(viewModel: ProductViewModel) {
         ) { page ->
             when (page) {
                 0 -> ProductScreen(viewModel = viewModel)
-                1 -> CustomerScreen(
-                    customers = customers,
-                    onAddCustomer = { name, phone, address, callback ->
-                        viewModel.insertCustomer(name, phone, address, callback)
-                    },
-                    onUpdateCustomer = { customer ->
-                        viewModel.updateCustomer(customer)
-                    },
-                    onDeleteCustomer = { customer ->
-                        viewModel.deleteCustomer(customer)
-                    }
-                )
+                1 -> CustomerScreen(viewModel = viewModel) // 🛠️ Actualizado para recibir viewModel directamente
                 2 -> SaleScreen(
                     sales = sales,
                     customers = customers,
