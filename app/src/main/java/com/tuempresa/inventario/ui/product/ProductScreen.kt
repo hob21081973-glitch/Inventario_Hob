@@ -1,37 +1,30 @@
 package com.tuempresa.inventario.ui.product
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.tuempresa.inventario.data.local.ProductEntity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductScreen(viewModel: ProductViewModel) {
+    val context = LocalContext.current
     val products by viewModel.allProducts.collectAsState()
 
     var name by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
     var stock by remember { mutableStateOf("") }
-    var message by remember { mutableStateOf<String?>(null) }
-
-    var expandedSearch by remember { mutableStateOf(false) }
     var productToEdit by remember { mutableStateOf<ProductEntity?>(null) }
-    var editName by remember { mutableStateOf("") }
-
-    val focusRequester = remember { FocusRequester() }
-    val filteredProducts = products.filter { it.name.contains(name, ignoreCase = true) }
 
     Column(
         modifier = Modifier
@@ -41,94 +34,58 @@ fun ProductScreen(viewModel: ProductViewModel) {
         Text("Inventario de Productos", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(12.dp))
 
-        // --- BUSCADOR / LUPA PARA CARGAR UNIDADES ---
-        ExposedDropdownMenuBox(
-            expanded = expandedSearch && filteredProducts.isNotEmpty() && name.isNotBlank(),
-            onExpandedChange = { expandedSearch = it }
-        ) {
-            OutlinedTextField(
-                value = name,
-                onValueChange = {
-                    name = it
-                    expandedSearch = true
-                },
-                label = { Text("Nombre del Producto") },
-                trailingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = "Buscar producto")
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(focusRequester)
-                    .menuAnchor()
-            )
-            ExposedDropdownMenu(
-                expanded = expandedSearch && filteredProducts.isNotEmpty() && name.isNotBlank(),
-                onDismissRequest = { expandedSearch = false }
-            ) {
-                filteredProducts.forEach { prod ->
-                    DropdownMenuItem(
-                        text = { Text("${prod.name} (Stock actual: ${prod.stock} - L ${prod.price})") },
-                        onClick = {
-                            name = prod.name
-                            price = prod.price.toString()
-                            expandedSearch = false
-                        }
-                    )
-                }
-            }
-        }
-
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Nombre del Producto") },
+            modifier = Modifier.fillMaxWidth()
+        )
         Spacer(modifier = Modifier.height(8.dp))
-        Row(modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
-                value = price,
-                onValueChange = { price = it },
-                label = { Text("Precio (L)") },
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            OutlinedTextField(
-                value = stock,
-                onValueChange = { stock = it },
-                label = { Text("Unidades a Agregar/Stock") },
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        message?.let {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
-        }
-
+        OutlinedTextField(
+            value = price,
+            onValueChange = { price = it },
+            label = { Text("Precio (L)") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = stock,
+            onValueChange = { stock = it },
+            label = { Text("Unidades en Stock") },
+            modifier = Modifier.fillMaxWidth()
+        )
         Spacer(modifier = Modifier.height(12.dp))
+
         Button(
             onClick = {
-                val p = price.toDoubleOrNull() ?: 0.0
-                val s = stock.toIntOrNull() ?: 0
-                if (name.isNotBlank() && p > 0) {
-                    viewModel.insertOrUpdateProduct(name, p, s) { msg ->
-                        message = msg
-                        name = ""
-                        price = ""
-                        stock = ""
-                        focusRequester.requestFocus()
-                    }
-                } else {
-                    message = "Complete nombre y precio válido."
+                val p = price.toDoubleOrNull()
+                val s = stock.toIntOrNull()
+                if (name.isBlank() || p == null || s == null) {
+                    Toast.makeText(context, "Complete los campos correctamente", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+                viewModel.insertOrUpdateProduct(name, p, s) { msg ->
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                    name = ""
+                    price = ""
+                    stock = ""
                 }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Guardar / Cargar Unidades")
+            Text("Guardar Producto")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
         Divider()
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text("Productos en Stock", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
 
         LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(products) { product ->
                 Card(
@@ -138,19 +95,17 @@ fun ProductScreen(viewModel: ProductViewModel) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(text = product.name, style = MaterialTheme.typography.titleMedium)
-                            Text(text = "Precio: L ${product.price} | Stock: ${product.stock}", style = MaterialTheme.typography.bodyMedium)
+                            Text(text = "Stock: ${product.stock} unidades", style = MaterialTheme.typography.bodyMedium)
+                            Text(text = "Precio: L ${product.price}", style = MaterialTheme.typography.bodySmall)
                         }
                         Row {
-                            IconButton(onClick = {
-                                productToEdit = product
-                                editName = product.name
-                            }) {
+                            IconButton(onClick = { productToEdit = product }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
                             }
                             IconButton(onClick = { viewModel.deleteProduct(product) }) {
@@ -163,33 +118,70 @@ fun ProductScreen(viewModel: ProductViewModel) {
         }
     }
 
-    productToEdit?.let { product ->
-        AlertDialog(
-            onDismissRequest = { productToEdit = null },
-            title = { Text("Editar Nombre de Producto") },
-            text = {
-                OutlinedTextField(
-                    value = editName,
-                    onValueChange = { editName = it },
-                    label = { Text("Nuevo Nombre") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                Button(onClick = {
-                    if (editName.isNotBlank()) {
-                        viewModel.updateProduct(product.copy(name = editName))
-                        productToEdit = null
-                    }
-                }) {
-                    Text("Guardar")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { productToEdit = null }) {
-                    Text("Cancelar")
-                }
+    // Diálogo de Edición de Producto
+    productToEdit?.let { prod ->
+        EditProductDialog(
+            product = prod,
+            onDismiss = { productToEdit = null },
+            onSave = { updatedName, updatedPrice, updatedStock ->
+                viewModel.updateProduct(prod.copy(name = updatedName, price = updatedPrice, stock = updatedStock))
+                Toast.makeText(context, "Producto actualizado con éxito", Toast.LENGTH_SHORT).show()
             }
         )
     }
+}
+
+@Composable
+fun EditProductDialog(
+    product: ProductEntity,
+    onDismiss: () -> Unit,
+    onSave: (String, Double, Int) -> Unit
+) {
+    var name by remember { mutableStateOf(product.name) }
+    var price by remember { mutableStateOf(product.price.toString()) }
+    var stock by remember { mutableStateOf(product.stock.toString()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Editar Producto") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nombre") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = price,
+                    onValueChange = { price = it },
+                    label = { Text("Precio (L)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = stock,
+                    onValueChange = { stock = it },
+                    label = { Text("Stock") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                val p = price.toDoubleOrNull() ?: product.price
+                val s = stock.toIntOrNull() ?: product.stock
+                if (name.isNotBlank()) {
+                    onSave(name.trim(), p, s)
+                    onDismiss()
+                }
+            }) {
+                Text("Guardar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
 }
