@@ -1,17 +1,16 @@
 package com.tuempresa.inventario.ui.sale
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.tuempresa.inventario.data.local.CustomerEntity
 import com.tuempresa.inventario.data.local.ProductEntity
@@ -26,29 +25,19 @@ fun SaleScreen(
     onAddSale: (String, String, Int, String, (Boolean, String) -> Unit) -> Unit,
     onDeleteSale: (SaleEntity) -> Unit
 ) {
-    var customerQuery by remember { mutableStateOf("") }
-    var expandedCustomer by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
-    var productQuery by remember { mutableStateOf("") }
-    var expandedProduct by remember { mutableStateOf(false) }
+    var selectedCustomer by remember { mutableStateOf("") }
+    var selectedProduct by remember { mutableStateOf("") }
+    var quantityText by remember { mutableStateOf("") }
+    var saleType by remember { mutableStateOf("CONTADO") }
 
-    var selectedProductPrice by remember { mutableStateOf(0.0) }
-    var quantityText by remember { mutableStateOf("1") }
-    var isCredit by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf<String?>(null) }
+    var customerExpanded by remember { mutableStateOf(false) }
+    var productExpanded by remember { mutableStateOf(false) }
 
-    // Búsqueda en el historial
-    var historySearchQuery by remember { mutableStateOf("") }
-    var showHistorySearch by remember { mutableStateOf(false) }
-
-    val customerFocusRequester = remember { FocusRequester() }
-
-    val filteredCustomers = customers.filter { it.name.contains(customerQuery, ignoreCase = true) }
-    val filteredProducts = products.filter { it.name.contains(productQuery, ignoreCase = true) }
-    
-    val filteredSales = sales.filter { 
-        it.customerName.contains(historySearchQuery, ignoreCase = true) || 
-        it.productName.contains(historySearchQuery, ignoreCase = true) 
+    // 🔤 Ordenar historial de ventas alfabéticamente por el nombre del cliente (A-Z)
+    val sortedSales = remember(sales) {
+        sales.sortedBy { it.customerName.lowercase() }
     }
 
     Column(
@@ -56,35 +45,33 @@ fun SaleScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Text("Nueva Venta", style = MaterialTheme.typography.titleLarge)
+        Text("Registro de Ventas", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(12.dp))
 
+        // Selector de Cliente
         ExposedDropdownMenuBox(
-            expanded = expandedCustomer && filteredCustomers.isNotEmpty(),
-            onExpandedChange = { expandedCustomer = it }
+            expanded = customerExpanded,
+            onExpandedChange = { customerExpanded = !customerExpanded }
         ) {
             OutlinedTextField(
-                value = customerQuery,
-                onValueChange = {
-                    customerQuery = it
-                    expandedCustomer = true
-                },
-                label = { Text("Buscar Cliente...") },
+                value = if (selectedCustomer.isEmpty()) "Seleccionar Cliente..." else selectedCustomer,
+                onValueChange = {},
+                readOnly = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .focusRequester(customerFocusRequester)
-                    .menuAnchor()
+                    .menuAnchor(),
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = customerExpanded) }
             )
             ExposedDropdownMenu(
-                expanded = expandedCustomer && filteredCustomers.isNotEmpty(),
-                onDismissRequest = { expandedCustomer = false }
+                expanded = customerExpanded,
+                onDismissRequest = { customerExpanded = false }
             ) {
-                filteredCustomers.forEach { customer ->
+                customers.forEach { customer ->
                     DropdownMenuItem(
                         text = { Text(customer.name) },
                         onClick = {
-                            customerQuery = customer.name
-                            expandedCustomer = false
+                            selectedCustomer = customer.name
+                            customerExpanded = false
                         }
                     )
                 }
@@ -93,32 +80,30 @@ fun SaleScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Selector de Producto
         ExposedDropdownMenuBox(
-            expanded = expandedProduct && filteredProducts.isNotEmpty(),
-            onExpandedChange = { expandedProduct = it }
+            expanded = productExpanded,
+            onExpandedChange = { productExpanded = !productExpanded }
         ) {
             OutlinedTextField(
-                value = productQuery,
-                onValueChange = {
-                    productQuery = it
-                    expandedProduct = true
-                },
-                label = { Text("Buscar Producto...") },
+                value = if (selectedProduct.isEmpty()) "Seleccionar Producto..." else selectedProduct,
+                onValueChange = {},
+                readOnly = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .menuAnchor()
+                    .menuAnchor(),
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = productExpanded) }
             )
             ExposedDropdownMenu(
-                expanded = expandedProduct && filteredProducts.isNotEmpty(),
-                onDismissRequest = { expandedProduct = false }
+                expanded = productExpanded,
+                onDismissRequest = { productExpanded = false }
             ) {
-                filteredProducts.forEach { product ->
+                products.forEach { product ->
                     DropdownMenuItem(
                         text = { Text("${product.name} (Stock: ${product.stock} - L ${product.price})") },
                         onClick = {
-                            productQuery = product.name
-                            selectedProductPrice = product.price
-                            expandedProduct = false
+                            selectedProduct = product.name
+                            productExpanded = false
                         }
                     )
                 }
@@ -127,99 +112,73 @@ fun SaleScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Row(modifier = Modifier.fillMaxWidth()) {
-            val totalVal = selectedProductPrice * (quantityText.toIntOrNull() ?: 1)
-            OutlinedTextField(
-                value = "L $totalVal",
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Monto Total") },
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            OutlinedTextField(
-                value = quantityText,
-                onValueChange = { quantityText = it },
-                label = { Text("Cantidad") },
-                modifier = Modifier.weight(1f)
-            )
-        }
+        OutlinedTextField(
+            value = quantityText,
+            onValueChange = { quantityText = it },
+            label = { Text("Cantidad") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Selector de Tipo de Venta (Contado / Crédito)
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Checkbox(
-                checked = isCredit,
-                onCheckedChange = { isCredit = it }
-            )
-            Text("Venta al Crédito")
-        }
-
-        message?.let {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(it, color = if (it.contains("éxit")) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(
+                    selected = saleType == "CONTADO",
+                    onClick = { saleType = "CONTADO" }
+                )
+                Text("Contado")
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(
+                    selected = saleType == "CREDITO",
+                    onClick = { saleType = "CREDITO" }
+                )
+                Text("Crédito")
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
+
         Button(
             onClick = {
-                val qty = quantityText.toIntOrNull() ?: 0
-                val type = if (isCredit) "CREDITO" else "CONTADO"
-                if (customerQuery.isNotBlank() && productQuery.isNotBlank() && qty > 0) {
-                    onAddSale(customerQuery, productQuery, qty, type) { success, msg ->
-                        message = msg
-                        if (success) {
-                            customerQuery = ""
-                            productQuery = ""
-                            quantityText = "1"
-                            selectedProductPrice = 0.0
-                            isCredit = false
-                            customerFocusRequester.requestFocus()
-                        }
+                val qty = quantityText.toIntOrNull()
+                if (selectedCustomer.isBlank() || selectedProduct.isBlank() || qty == null || qty <= 0) {
+                    Toast.makeText(context, "Complete los datos de la venta correctamente", Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+
+                onAddSale(selectedCustomer, selectedProduct, qty, saleType) { success, msg ->
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                    if (success) {
+                        quantityText = ""
+                        selectedProduct = ""
                     }
-                } else {
-                    message = "Complete todos los campos correctamente."
                 }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Registrar Venta y Descontar Stock")
+            Text("Registrar Venta")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
         Divider()
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // --- ENCABEZADO HISTORIAL CON LUPA DE BÚSQUEDA ---
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Historial de Ventas", style = MaterialTheme.typography.titleMedium)
-            IconButton(onClick = { showHistorySearch = !showHistorySearch }) {
-                Icon(Icons.Default.Search, contentDescription = "Buscar en historial", tint = MaterialTheme.colorScheme.primary)
-            }
-        }
-
-        if (showHistorySearch) {
-            OutlinedTextField(
-                value = historySearchQuery,
-                onValueChange = { historySearchQuery = it },
-                label = { Text("Filtrar por cliente o producto...") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
+        Text("Historial de Ventas (Ordenadas por Cliente A-Z)", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
 
         LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(filteredSales) { sale ->
+            items(sortedSales) { sale ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -227,22 +186,18 @@ fun SaleScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(text = "Cliente: ${sale.customerName}", style = MaterialTheme.typography.titleMedium)
-                            Text(text = "Detalle: ${sale.productName} | Total: L ${sale.amount}")
-                            Text(text = "Fecha: ${sale.date}")
-                            Text(
-                                text = "Tipo: ${sale.saleType}",
-                                color = if (sale.saleType == "CREDITO") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                                style = MaterialTheme.typography.labelLarge
-                            )
+                            Text(text = "Prod: ${sale.productName}", style = MaterialTheme.typography.bodyMedium)
+                            Text(text = "Total: L ${sale.amount} [${sale.saleType}]", style = MaterialTheme.typography.bodySmall)
+                            Text(text = "Fecha: ${sale.date}", style = MaterialTheme.typography.labelSmall)
                         }
                         IconButton(onClick = { onDeleteSale(sale) }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Eliminar venta", tint = MaterialTheme.colorScheme.error)
+                            Icon(Icons.Default.Delete, contentDescription = "Eliminar Venta", tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
