@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
@@ -18,6 +19,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
+import com.tuempresa.inventario.ui.credit.CreditPaymentScreen
 import com.tuempresa.inventario.ui.customer.CustomerScreen
 import com.tuempresa.inventario.ui.navigation.AppScreen
 import com.tuempresa.inventario.ui.product.ProductScreen
@@ -46,27 +48,29 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MainScreen(viewModel: ProductViewModel) {
-    val pagerState = rememberPagerState(pageCount = { 4 })
+    val pagerState = rememberPagerState(pageCount = { 5 }) // 5 pestañas ahora
     val coroutineScope = rememberCoroutineScope()
 
     val products by viewModel.allProducts.collectAsState()
     val customers by viewModel.allCustomers.collectAsState()
     val sales by viewModel.allSales.collectAsState()
 
+    // Definimos las 5 pestañas con sus respectivos iconos
     val items = listOf(
-        AppScreen.Products to Icons.Default.Home,
-        AppScreen.Customers to Icons.Default.Person,
-        AppScreen.Sales to Icons.Default.ShoppingCart,
-        AppScreen.Reports to Icons.Default.List
+        Triple(AppScreen.Products, Icons.Default.Home, "Inventario"),
+        Triple(AppScreen.Customers, Icons.Default.Person, "Clientes"),
+        Triple(AppScreen.Sales, Icons.Default.ShoppingCart, "Ventas"),
+        Triple(AppScreen.Reports, Icons.Default.List, "Reportes"),
+        Triple(AppScreen.Reports, Icons.Default.CreditCard, "Créditos") // Pestaña de Abonos y Créditos
     )
 
     Scaffold(
         bottomBar = {
             NavigationBar {
-                items.forEachIndexed { index, (screen, icon) ->
+                items.forEachIndexed { index, (_, icon, label) ->
                     NavigationBarItem(
-                        icon = { Icon(icon, contentDescription = screen.title) },
-                        label = { Text(screen.title) },
+                        icon = { Icon(icon, contentDescription = label) },
+                        label = { Text(label) },
                         selected = pagerState.currentPage == index,
                         onClick = {
                             coroutineScope.launch {
@@ -86,7 +90,7 @@ fun MainScreen(viewModel: ProductViewModel) {
         ) { page ->
             when (page) {
                 0 -> ProductScreen(viewModel = viewModel)
-                1 -> CustomerScreen(viewModel = viewModel) // 🛠️ Actualizado para recibir viewModel directamente
+                1 -> CustomerScreen(viewModel = viewModel)
                 2 -> SaleScreen(
                     sales = sales,
                     customers = customers,
@@ -99,6 +103,7 @@ fun MainScreen(viewModel: ProductViewModel) {
                     }
                 )
                 3 -> ReportScreen(sales = sales, customers = customers, products = products)
+                4 -> CreditPaymentScreen(viewModel = viewModel) // Módulo de Abonos
             }
         }
     }
