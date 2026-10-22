@@ -11,6 +11,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.tuempresa.inventario.data.local.ProductEntity
@@ -19,26 +21,35 @@ import com.tuempresa.inventario.data.local.ProductEntity
 @Composable
 fun ProductScreen(viewModel: ProductViewModel) {
     val context = LocalContext.current
-    val products by viewModel.allProducts.collectAsState()
+    val rawProducts by viewModel.allProducts.collectAsState()
+    
+    // 🔤 Ordenar alfabéticamente de la A a la Z
+    val products = remember(rawProducts) {
+        rawProducts.sortedBy { it.name.lowercase() }
+    }
 
     var name by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
     var stock by remember { mutableStateOf("") }
     var productToEdit by remember { mutableStateOf<ProductEntity?>(null) }
 
+    val focusRequester = remember { FocusRequester() }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Text("Inventario de Productos", style = MaterialTheme.typography.titleLarge)
+        Text("Stock de Productos", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
             label = { Text("Nombre del Producto") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester) // 🎯 Control de foco
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
@@ -69,6 +80,10 @@ fun ProductScreen(viewModel: ProductViewModel) {
                     name = ""
                     price = ""
                     stock = ""
+                    // Regresar el foco al campo Nombre
+                    try {
+                        focusRequester.requestFocus()
+                    } catch (_: Exception) {}
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -80,7 +95,7 @@ fun ProductScreen(viewModel: ProductViewModel) {
         Divider()
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text("Productos en Stock", style = MaterialTheme.typography.titleMedium)
+        Text("Productos Registrados (A-Z)", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
 
         LazyColumn(
@@ -118,7 +133,6 @@ fun ProductScreen(viewModel: ProductViewModel) {
         }
     }
 
-    // Diálogo de Edición de Producto
     productToEdit?.let { prod ->
         EditProductDialog(
             product = prod,
