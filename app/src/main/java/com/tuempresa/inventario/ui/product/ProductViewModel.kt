@@ -48,9 +48,10 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    // 🛠️ Edición completa de producto
     fun updateProduct(product: ProductEntity) {
         viewModelScope.launch {
-            repository.insertProduct(product)
+            repository.insertProduct(product) // Room insert reemplaza si el ID es el mismo
         }
     }
 
@@ -72,6 +73,7 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    // 🛠️ Edición completa de cliente
     fun updateCustomer(customer: CustomerEntity) {
         viewModelScope.launch {
             repository.insertCustomer(customer)
@@ -132,6 +134,48 @@ class ProductViewModel(application: Application) : AndroidViewModel(application)
             } catch (_: Exception) {}
 
             repository.deleteSale(sale)
+        }
+    }
+
+    // 💳 Lógica para aplicar abonos o cancelar saldo de ventas al crédito por cliente
+    fun applyCreditPayment(customerName: String, paymentAmount: Double, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val creditSales = allSales.value.filter { 
+                it.customerName.equals(customerName.trim(), ignoreCase = true) && it.saleType.equals("CREDITO", ignoreCase = true) 
+            }
+
+            val totalDebt = creditSales.sumOf { it.amount }
+
+            if (creditSales.isEmpty()) {
+                onResult(false, "El cliente no tiene deudas al crédito registradas.")
+                return@launch
+            }
+
+            if (paymentAmount <= 0) {
+                onResult(false, "Ingrese un monto válido mayor a cero.")
+                return@launch
+            }
+
+            if (paymentAmount > totalDebt) {
+                onResult(false, "El abono no puede ser mayor a la deuda total (L $totalDebt).")
+                return@launch
+            }
+
+            var remainingPayment = paymentAmount
+            for (sale in creditSales) {
+                if (remainingPayment <= 0) break
+
+                if (sale.amount <= remainingPayment) {
+                    remainingPayment -= sale.amount
+                    repository.deleteSale(sale)
+                } else {
+                    val updatedSale = sale.copy(amount = sale.amount - remainingPayment)
+                    repository.insertSale(updatedSale)
+                    remainingPayment = 0.0
+                }
+            }
+
+            onResult(true, "¡Abono aplicado con éxito! Saldo actualizado.")
         }
     }
 }
