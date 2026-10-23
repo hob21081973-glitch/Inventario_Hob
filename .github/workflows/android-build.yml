@@ -30,9 +30,14 @@ jobs:
       - name: Build Release APK with Gradle
         run: gradle assembleRelease --no-daemon
 
-      - name: Decode Keystore File
+      - name: Generate Signing Keystore on the fly
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\r\n ' | base64 --decode > release-key.pfx
+          keytool -genkey -v -keystore release-key.jks \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -alias my-key-alias \
+            -storepass "MiPassword123!" \
+            -keypass "MiPassword123!" \
+            -dname "CN=ControlVentasApp, OU=IT, O=Home, L=Unknown, ST=Unknown, C=US"
 
       - name: Sign APK with Android Build-Tools
         run: |
@@ -40,9 +45,9 @@ jobs:
           APK_PATH=$(find app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
           
           $APKSIGNER sign \
-            --ks release-key.pfx \
-            --ks-pass pass:"${{ secrets.KEYSTORE_PASSWORD }}" \
-            --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
+            --ks release-key.jks \
+            --ks-pass pass:"MiPassword123!" \
+            --ks-key-alias "my-key-alias" \
             --out app-release-signed.apk \
             "$APK_PATH"
 
