@@ -22,15 +22,13 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Generate Gradle Wrapper if missing
-        run: |
-          if [ ! -f ./gradlew ]; then
-            gradle wrapper
-          fi
-          chmod +x gradlew
+      - name: Setup Gradle Version 8.5
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.5'
 
       - name: Build Release APK with Gradle
-        run: ./gradlew assembleRelease --no-daemon
+        run: gradle assembleRelease --no-daemon
 
       - name: Decode Keystore File
         run: |
