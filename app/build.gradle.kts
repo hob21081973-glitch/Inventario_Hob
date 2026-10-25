@@ -20,16 +20,6 @@ android {
             useSupportLibrary = true
         }
     }
-
-    signingConfigs {
-        create("release") {
-            storeFile = file(System.getenv("ANDROID_KEYSTORE_PATH") ?: "debug.keystore")
-            storePassword = System.getenv("ANDROID_STORE_PASSWORD") ?: "android"
-            keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: "androiddebugkey"
-            keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: "android"
-        }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = false
