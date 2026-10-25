@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +26,7 @@ fun CreditPaymentScreen(viewModel: ProductViewModel) {
 
     var selectedCustomer by remember { mutableStateOf<CustomerEntity?>(null) }
     var paymentInput by remember { mutableStateOf("") }
+    var showCustomerSearchDialog by remember { mutableStateOf(false) }
 
     // Filtrar únicamente las ventas al crédito del cliente seleccionado
     val creditSalesOfCustomer = if (selectedCustomer != null) {
@@ -52,42 +54,33 @@ fun CreditPaymentScreen(viewModel: ProductViewModel) {
         }
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Selector de Cliente
+        // Selector de Cliente con Lupa
         Text("Seleccione un cliente con deudas:", style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(8.dp))
 
         if (customers.isEmpty()) {
             Text("No hay clientes registrados.", color = MaterialTheme.colorScheme.error)
         } else {
-            var expanded by remember { mutableStateOf(false) }
-            
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedTextField(
                     value = selectedCustomer?.name ?: "Seleccione un cliente...",
                     onValueChange = {},
                     readOnly = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(),
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+                    modifier = Modifier.weight(1f)
                 )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(
+                    onClick = { showCustomerSearchDialog = true },
+                    modifier = Modifier.size(48dp)
                 ) {
-                    customers.forEach { customer ->
-                        DropdownMenuItem(
-                            text = { Text(customer.name) },
-                            onClick = {
-                                selectedCustomer = customer
-                                paymentInput = ""
-                                expanded = false
-                            }
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Buscar cliente para crédito",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }
@@ -168,4 +161,81 @@ fun CreditPaymentScreen(viewModel: ProductViewModel) {
             }
         }
     }
+
+    // Diálogo de Búsqueda de Cliente para Créditos
+    if (showCustomerSearchDialog) {
+        SearchCustomerForCreditDialog(
+            customers = customers,
+            onDismiss = { showCustomerSearchDialog = false },
+            onSelect = { customer ->
+                selectedCustomer = customer
+                paymentInput = ""
+                showCustomerSearchDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun SearchCustomerForCreditDialog(
+    customers: List<CustomerEntity>,
+    onDismiss: () -> Unit,
+    onSelect: (CustomerEntity) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val filtered = remember(searchQuery, customers) {
+        if (searchQuery.isBlank()) customers
+        else customers.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Seleccionar Cliente") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Filtrar cliente...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(filtered) { customer ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            onClick = { onSelect(customer) },
+                            elevation = CardDefaults.cardElevation(1.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 12.dp),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                Text(text = customer.name, style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
 }
