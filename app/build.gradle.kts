@@ -21,6 +21,18 @@ android {
         }
     }
 
+    signingConfigs {
+        // Configuramos una firma estable para desarrollo/release local y CI/CD
+        // Si usas debug por ahora para pruebas sin llaves complejas:
+        release {
+            // Apunta a la firma de debug por defecto para mantener un certificado idéntico en pruebas
+            storeFile = file(System.getenv("ANDROID_KEYSTORE_PATH") ?: "debug.keystore")
+            storePassword = System.getenv("ANDROID_STORE_PASSWORD") ?: "android"
+            keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: "androiddebugkey"
+            keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -28,6 +40,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Asignamos la configuración de firma para que el APK release salga firmado siempre igual
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
