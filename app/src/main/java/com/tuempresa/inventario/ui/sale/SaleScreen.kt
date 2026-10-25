@@ -89,7 +89,6 @@ fun SaleScreen(
             Spacer(modifier = Modifier.width(8.dp))
             IconButton(
                 onClick = { showProductSearchDialog = true },
-                modifier = Modifier.size(48dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
