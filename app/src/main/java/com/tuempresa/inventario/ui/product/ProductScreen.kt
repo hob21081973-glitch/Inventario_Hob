@@ -155,7 +155,7 @@ fun ProductScreen(viewModel: ProductViewModel) {
         }
     }
 
-    // Diálogo de Búsqueda con Lupa para Editar o Eliminar productos específicos
+    // Diálogo de Búsqueda con Lupa ampliado para Editar o Eliminar productos específicos
     if (showSearchDialog) {
         SearchProductDialog(
             products = products,
@@ -199,12 +199,16 @@ fun SearchProductDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        // 🔍 Ampliamos el diálogo para que ocupe casi toda la pantalla de manera cómoda
+        modifier = Modifier
+            .fillMaxWidth(0.95f)
+            .fillMaxHeight(0.85f),
         title = { Text("Buscar Producto (Editar / Eliminar)") },
         text = {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(350.dp), // Ajustable según diseño
+                    .fillMaxSize()
+                    .padding(vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
@@ -252,7 +256,10 @@ fun SearchProductDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text("Cerrar")
             }
         }
