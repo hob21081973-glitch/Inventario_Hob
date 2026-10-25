@@ -27,11 +27,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Asignamos la configuración de firma para que el APK release salga firmado siempre igual
-            signingConfig = signingConfigs.getByName("release")
         }
     }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
