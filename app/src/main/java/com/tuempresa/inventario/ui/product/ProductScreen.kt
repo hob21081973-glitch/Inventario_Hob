@@ -205,7 +205,7 @@ fun SearchProductDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(350px.dp), // Ajustable según diseño
+                    .height(350.dp), // Ajustable según diseño
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
