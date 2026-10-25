@@ -1,6 +1,7 @@
 package com.tuempresa.inventario.ui.credit
 
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,7 +29,6 @@ fun CreditPaymentScreen(viewModel: ProductViewModel) {
     var paymentInput by remember { mutableStateOf("") }
     var showCustomerSearchDialog by remember { mutableStateOf(false) }
 
-    // Filtrar únicamente las ventas al crédito del cliente seleccionado
     val creditSalesOfCustomer = if (selectedCustomer != null) {
         sales.filter { 
             it.customerName.equals(selectedCustomer!!.name.trim(), ignoreCase = true) && 
@@ -54,7 +54,6 @@ fun CreditPaymentScreen(viewModel: ProductViewModel) {
         }
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Selector de Cliente con Lupa
         Text("Seleccione un cliente con deudas:", style = MaterialTheme.typography.bodyMedium)
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -73,7 +72,7 @@ fun CreditPaymentScreen(viewModel: ProductViewModel) {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 IconButton(
-                    onClick = { showCustomerSearchDialog = true },
+                    onClick = { showCustomerSearchDialog = true }
                 ) {
                     Icon(
                         imageVector = Icons.Default.Search,
@@ -86,7 +85,6 @@ fun CreditPaymentScreen(viewModel: ProductViewModel) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Si hay un cliente seleccionado, mostrar su estado de cuenta y formulario de abono
         if (selectedCustomer != null) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -161,7 +159,6 @@ fun CreditPaymentScreen(viewModel: ProductViewModel) {
         }
     }
 
-    // Diálogo de Búsqueda de Cliente para Créditos
     if (showCustomerSearchDialog) {
         SearchCustomerForCreditDialog(
             customers = customers,
@@ -211,17 +208,17 @@ fun SearchCustomerForCreditDialog(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(filtered) { customer ->
+                        // Solución estable usando .clickable en lugar del Card experimental onClick
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(50.dp),
-                            onClick = { onSelect(customer) },
+                                .clickable { onSelect(customer) },
                             elevation = CardDefaults.cardElevation(1.dp)
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 12.dp),
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
                                 contentAlignment = Alignment.CenterStart
                             ) {
                                 Text(text = customer.name, style = MaterialTheme.typography.bodyLarge)
