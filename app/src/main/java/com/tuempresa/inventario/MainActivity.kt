@@ -55,7 +55,7 @@ fun MainScreen(viewModel: ProductViewModel) {
     val sales by viewModel.allSales.collectAsState()
 
     val items = listOf(
-        Triple(AppScreen.Products, Icons.Default.Home, "Inventario"),
+        Triple(AppScreen.Products, Icons.Default.Home, "Stock"),
         Triple(AppScreen.Customers, Icons.Default.Person, "Clientes"),
         Triple(AppScreen.Sales, Icons.Default.ShoppingCart, "Ventas"),
         Triple(AppScreen.Reports, Icons.Default.List, "Reportes"),
