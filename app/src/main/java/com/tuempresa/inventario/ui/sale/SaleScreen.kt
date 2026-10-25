@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,8 +33,9 @@ fun SaleScreen(
     var quantityText by remember { mutableStateOf("") }
     var saleType by remember { mutableStateOf("CONTADO") }
 
-    var customerExpanded by remember { mutableStateOf(false) }
-    var productExpanded by remember { mutableStateOf(false) }
+    // Estados para controlar los diálogos de búsqueda con lupa
+    var showCustomerSearchDialog by remember { mutableStateOf(false) }
+    var showProductSearchDialog by remember { mutableStateOf(false) }
 
     // 🔤 Ordenar historial de ventas alfabéticamente por el nombre del cliente (A-Z)
     val sortedSales = remember(sales) {
@@ -48,65 +50,53 @@ fun SaleScreen(
         Text("Registro de Ventas", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Selector de Cliente
-        ExposedDropdownMenuBox(
-            expanded = customerExpanded,
-            onExpandedChange = { customerExpanded = !customerExpanded }
+        // Selector de Cliente con Lupa
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
                 value = if (selectedCustomer.isEmpty()) "Seleccionar Cliente..." else selectedCustomer,
                 onValueChange = {},
                 readOnly = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(),
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = customerExpanded) }
+                modifier = Modifier.weight(1f)
             )
-            ExposedDropdownMenu(
-                expanded = customerExpanded,
-                onDismissRequest = { customerExpanded = false }
+            Spacer(modifier = Modifier.width(8.dp))
+            IconButton(
+                onClick = { showCustomerSearchDialog = true },
+                modifier = Modifier.size(48dp)
             ) {
-                customers.forEach { customer ->
-                    DropdownMenuItem(
-                        text = { Text(customer.name) },
-                        onClick = {
-                            selectedCustomer = customer.name
-                            customerExpanded = false
-                        }
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Buscar cliente",
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Selector de Producto
-        ExposedDropdownMenuBox(
-            expanded = productExpanded,
-            onExpandedChange = { productExpanded = !productExpanded }
+        // Selector de Producto con Lupa
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
                 value = if (selectedProduct.isEmpty()) "Seleccionar Producto..." else selectedProduct,
                 onValueChange = {},
                 readOnly = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(),
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = productExpanded) }
+                modifier = Modifier.weight(1f)
             )
-            ExposedDropdownMenu(
-                expanded = productExpanded,
-                onDismissRequest = { productExpanded = false }
+            Spacer(modifier = Modifier.width(8.dp))
+            IconButton(
+                onClick = { showProductSearchDialog = true },
+                modifier = Modifier.size(48dp)
             ) {
-                products.forEach { product ->
-                    DropdownMenuItem(
-                        text = { Text("${product.name} (Stock: ${product.stock} - L ${product.price})") },
-                        onClick = {
-                            selectedProduct = product.name
-                            productExpanded = false
-                        }
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Buscar producto",
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
         }
 
@@ -204,4 +194,157 @@ fun SaleScreen(
             }
         }
     }
+
+    // Diálogo de Búsqueda de Cliente para Ventas
+    if (showCustomerSearchDialog) {
+        SearchCustomerForSaleDialog(
+            customers = customers,
+            onDismiss = { showCustomerSearchDialog = false },
+            onSelect = { customer ->
+                selectedCustomer = customer.name
+                showCustomerSearchDialog = false
+            }
+        )
+    }
+
+    // Diálogo de Búsqueda de Producto para Ventas
+    if (showProductSearchDialog) {
+        SearchProductForSaleDialog(
+            products = products,
+            onDismiss = { showProductSearchDialog = false },
+            onSelect = { product ->
+                selectedProduct = product.name
+                showProductSearchDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun SearchCustomerForSaleDialog(
+    customers: List<CustomerEntity>,
+    onDismiss: () -> Unit,
+    onSelect: (CustomerEntity) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val filtered = remember(searchQuery, customers) {
+        if (searchQuery.isBlank()) customers
+        else customers.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Seleccionar Cliente") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Filtrar cliente...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(filtered) { customer ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            onClick = { onSelect(customer) },
+                            elevation = CardDefaults.cardElevation(1.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 12.dp),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                Text(text = customer.name, style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+@Composable
+fun SearchProductForSaleDialog(
+    products: List<ProductEntity>,
+    onDismiss: () -> Unit,
+    onSelect: (ProductEntity) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val filtered = remember(searchQuery, products) {
+        if (searchQuery.isBlank()) products
+        else products.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Seleccionar Producto") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Filtrar producto...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(filtered) { product ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { onSelect(product) },
+                            elevation = CardDefaults.cardElevation(1.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(10.dp)
+                            ) {
+                                Text(text = product.name, style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    text = "Stock: ${product.stock} - L ${product.price}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
 }
