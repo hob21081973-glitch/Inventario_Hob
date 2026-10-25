@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,6 +33,9 @@ fun ProductScreen(viewModel: ProductViewModel) {
     var price by remember { mutableStateOf("") }
     var stock by remember { mutableStateOf("") }
     var productToEdit by remember { mutableStateOf<ProductEntity?>(null) }
+    
+    // Estado para controlar la visibilidad del diálogo de búsqueda con lupa
+    var showSearchDialog by remember { mutableStateOf(false) }
 
     val focusRequester = remember { FocusRequester() }
 
@@ -43,14 +47,33 @@ fun ProductScreen(viewModel: ProductViewModel) {
         Text("Stock de Productos", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(12.dp))
 
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Nombre del Producto") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester) // 🎯 Control de foco
-        )
+        // Fila para separar el campo de texto libre y la lupa de búsqueda exclusiva
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Nombre del Producto (Nuevo)") },
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(focusRequester) // 🎯 Control de foco
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            // Botón con Lupa exclusivo para buscar productos existentes para editar/eliminar
+            IconButton(
+                onClick = { showSearchDialog = true },
+                modifier = Modifier.size(48dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Buscar producto existente",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = price,
@@ -133,6 +156,23 @@ fun ProductScreen(viewModel: ProductViewModel) {
         }
     }
 
+    // Diálogo de Búsqueda con Lupa para Editar o Eliminar productos específicos
+    if (showSearchDialog) {
+        SearchProductDialog(
+            products = products,
+            onDismiss = { showSearchDialog = false },
+            onEdit = { product ->
+                showSearchDialog = false
+                productToEdit = product
+            },
+            onDelete = { product ->
+                showSearchDialog = false
+                viewModel.deleteProduct(product)
+                Toast.makeText(context, "Producto eliminado", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
     productToEdit?.let { prod ->
         EditProductDialog(
             product = prod,
@@ -143,6 +183,81 @@ fun ProductScreen(viewModel: ProductViewModel) {
             }
         )
     }
+}
+
+@Composable
+fun SearchProductDialog(
+    products: List<ProductEntity>,
+    onDismiss: () -> Unit,
+    onEdit: (ProductEntity) -> Unit,
+    onDelete: (ProductEntity) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredProducts = remember(searchQuery, products) {
+        if (searchQuery.isBlank()) products
+        else products.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Buscar Producto (Editar / Eliminar)") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(350px.dp), // Ajustable según diseño
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Escriba para filtrar...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(filteredProducts) { prod ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            elevation = CardDefaults.cardElevation(1.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(text = prod.name, style = MaterialTheme.typography.bodyLarge)
+                                    Text(text = "Stock: ${prod.stock} | L ${prod.price}", style = MaterialTheme.typography.bodySmall)
+                                }
+                                Row {
+                                    IconButton(onClick = { onEdit(prod) }) {
+                                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                    IconButton(onClick = { onDelete(prod) }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cerrar")
+            }
+        }
+    )
 }
 
 @Composable
