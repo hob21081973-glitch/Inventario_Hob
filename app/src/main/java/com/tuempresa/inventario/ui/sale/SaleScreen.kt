@@ -1,6 +1,7 @@
 package com.tuempresa.inventario.ui.sale
 
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -33,11 +34,9 @@ fun SaleScreen(
     var quantityText by remember { mutableStateOf("") }
     var saleType by remember { mutableStateOf("CONTADO") }
 
-    // Estados para controlar los diálogos de búsqueda con lupa
     var showCustomerSearchDialog by remember { mutableStateOf(false) }
     var showProductSearchDialog by remember { mutableStateOf(false) }
 
-    // 🔤 Ordenar historial de ventas alfabéticamente por el nombre del cliente (A-Z)
     val sortedSales = remember(sales) {
         sales.sortedBy { it.customerName.lowercase() }
     }
@@ -63,7 +62,7 @@ fun SaleScreen(
             )
             Spacer(modifier = Modifier.width(8.dp))
             IconButton(
-                onClick = { showCustomerSearchDialog = true },
+                onClick = { showCustomerSearchDialog = true }
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
@@ -88,7 +87,7 @@ fun SaleScreen(
             )
             Spacer(modifier = Modifier.width(8.dp))
             IconButton(
-                onClick = { showProductSearchDialog = true },
+                onClick = { showProductSearchDialog = true }
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
@@ -110,7 +109,6 @@ fun SaleScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Selector de Tipo de Venta (Contado / Crédito)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -193,7 +191,6 @@ fun SaleScreen(
         }
     }
 
-    // Diálogo de Búsqueda de Cliente para Ventas
     if (showCustomerSearchDialog) {
         SearchCustomerForSaleDialog(
             customers = customers,
@@ -205,7 +202,6 @@ fun SaleScreen(
         )
     }
 
-    // Diálogo de Búsqueda de Producto para Ventas
     if (showProductSearchDialog) {
         SearchProductForSaleDialog(
             products = products,
@@ -254,17 +250,17 @@ fun SearchCustomerForSaleDialog(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(filtered) { customer ->
+                        // Solución estable usando .clickable en lugar de onClick experimental en Card
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(50.dp),
-                            onClick = { onSelect(customer) },
+                                .clickable { onSelect(customer) },
                             elevation = CardDefaults.cardElevation(1.dp)
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 12.dp),
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
                                 contentAlignment = Alignment.CenterStart
                             ) {
                                 Text(text = customer.name, style = MaterialTheme.typography.bodyLarge)
@@ -318,9 +314,11 @@ fun SearchProductForSaleDialog(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(filtered) { product ->
+                        // Solución estable usando .clickable en lugar de onClick experimental en Card
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { onSelect(product) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(product) },
                             elevation = CardDefaults.cardElevation(1.dp)
                         ) {
                             Column(
