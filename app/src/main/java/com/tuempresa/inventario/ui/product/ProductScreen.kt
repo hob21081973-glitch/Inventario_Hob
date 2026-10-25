@@ -64,7 +64,6 @@ fun ProductScreen(viewModel: ProductViewModel) {
             // Botón con Lupa exclusivo para buscar productos existentes para editar/eliminar
             IconButton(
                 onClick = { showSearchDialog = true },
-                modifier = Modifier.size(48dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
