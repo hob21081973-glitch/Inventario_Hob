@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,6 +34,9 @@ fun CustomerScreen(viewModel: ProductViewModel) {
     var phone by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
     var customerToEdit by remember { mutableStateOf<CustomerEntity?>(null) }
+    
+    // Estado para controlar la visibilidad del diálogo de búsqueda con lupa
+    var showSearchDialog by remember { mutableStateOf(false) }
 
     val focusRequester = remember { FocusRequester() }
 
@@ -44,14 +48,33 @@ fun CustomerScreen(viewModel: ProductViewModel) {
         Text("Gestión de Clientes", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(12.dp))
 
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Nombre del Cliente") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester) // 🎯 Control de foco
-        )
+        // Fila para el campo de texto de nuevo cliente y la lupa exclusiva de búsqueda
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Nombre del Cliente (Nuevo)") },
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(focusRequester) // 🎯 Control de foco
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            // Botón con Lupa exclusivo para buscar clientes existentes para editar/eliminar
+            IconButton(
+                onClick = { showSearchDialog = true },
+                modifier = Modifier.size(48dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Buscar cliente existente",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = phone,
@@ -134,6 +157,23 @@ fun CustomerScreen(viewModel: ProductViewModel) {
         }
     }
 
+    // Diálogo de Búsqueda con Lupa para Editar o Eliminar clientes específicos
+    if (showSearchDialog) {
+        SearchCustomerDialog(
+            customers = customers,
+            onDismiss = { showSearchDialog = false },
+            onEdit = { customer ->
+                showSearchDialog = false
+                customerToEdit = customer
+            },
+            onDelete = { customer ->
+                showSearchDialog = false
+                viewModel.deleteCustomer(customer)
+                Toast.makeText(context, "Cliente eliminado", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
     customerToEdit?.let { cust ->
         EditCustomerDialog(
             customer = cust,
@@ -144,6 +184,81 @@ fun CustomerScreen(viewModel: ProductViewModel) {
             }
         )
     }
+}
+
+@Composable
+fun SearchCustomerDialog(
+    customers: List<CustomerEntity>,
+    onDismiss: () -> Unit,
+    onEdit: (CustomerEntity) -> Unit,
+    onDelete: (CustomerEntity) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredCustomers = remember(searchQuery, customers) {
+        if (searchQuery.isBlank()) customers
+        else customers.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Buscar Cliente (Editar / Eliminar)") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("Escriba para filtrar...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(filteredCustomers) { cust ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            elevation = CardDefaults.cardElevation(1.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(text = cust.name, style = MaterialTheme.typography.bodyLarge)
+                                    Text(text = "Tel: ${cust.phone}", style = MaterialTheme.typography.bodySmall)
+                                }
+                                Row {
+                                    IconButton(onClick = { onEdit(cust) }) {
+                                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                    IconButton(onClick = { onDelete(cust) }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cerrar")
+            }
+        }
+    )
 }
 
 @Composable
